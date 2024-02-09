@@ -1,0 +1,93 @@
+# A small test file - the actual jobs in this file will
+# never be run, it's for testing the parsing of nodes only.
+
+
+# Some variables set by the user
+[cron]
+appname = $(env_read APPNAME)
+git_origin = ssh://some-origin/some-repo.git
+git_branch = master
+build_artifacts =
+build_artifacts = $(build_artifacts) bin/program
+build_artifacts = $(build_artifacts) info/release-info.txt
+target_directory = /var/www/$(appname)
+test_string = one
+test_string += two
+test_string += three
+test_array = [four, five, six]
+test_array[] += seven
+test_empty_array[] += eight
+test_empty_string += nine
+
+
+[job]
+ID = Full deployment
+MESSAGE = Performing a full deployment
+JOBS[] = [ build, upgrade, Done ]
+
+[job]
+ID = build
+MESSAGE = Starting build process
+JOBS[] = [ Check changes, checkout, Build thing, test, package ]
+
+[job]
+ID = upgrade
+MESSAGE = Performing upgrade
+JOBS[] = [ pre-deployment, Upgrade DB, Copy files]
+
+[job]
+ID = Check changes
+MESSAGE = Checking if sources changed, will continue only if sources changed
+EXEC += if [ `git  ls-remote $(git_origin) heads/master | cut -f 1 ` == $(current HASH)]; then
+EXEC +=    exit -1;
+EXEC += else
+EXEC +=    exit 0;
+
+[job]
+ID = checkout   # Comments work like this
+MESSAGE = A single long line message up to 8kb
+ROLLBACK = # Nothing to do if this fails
+EXEC = git clone $(git_origin) && git checkout $(git_branch) $(_WORKING_PATH)
+
+[job]
+ID = Build thing
+MESSAGE = Building $(_JOB) for $(_DEPLOYMENT) with parameter $1
+ROLLBACK = # Nothing to do if this fails
+EXEC = make $1
+
+[job]
+ID = test
+MESSAGE = Testing $(_DEPLOYMENT)
+ROLLBACK = # Nothing to do if this fails
+EXEC = test.sh
+
+[job]
+ID = package
+MESSAGE = Packaging $(_DEPLOYMENT)
+EXEC = tar -zcvf $(_TMPDIR)/$(env_read APPNAME).tar.gz $(build_artifacts)
+
+[job]
+ID = pre-deployment
+MESSAGE = Deploying to $(target_directory)
+WORKING_DIR = $(target_directory)
+EXEC = systemctl stop && tar -zxvf $(env_read APPNAME)
+
+[job]
+ID = Upgrade DB
+MESSAGE = Upgrading database
+WORKING_DIR = $(target_directory)
+ROLLBACK = $(exec ./rollback.sh)
+EXEC = db/upgrade.sh
+
+[job]
+ID = Copy files
+MESSAGE = Copying files to $(target_directory)
+EXEC = cp -Rv $(artifacts) $(target_directory)
+
+[job]
+ID = Done
+MESSAGE = Setting finished variables
+HASH = $(exec git log -1 | head -n 1 | cut -f 1 -d \  )
+
+
+
