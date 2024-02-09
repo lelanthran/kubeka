@@ -1,0 +1,183 @@
+Ideally, need to specify stages, jobs, etc.
+[Ideas 1 - 3 removed]
+
+Idea 4:  Simple, with extras
+
+--- deployment-name.kubeka ---
+
+# 1. Variables with a leading underscore cannot be set (constants)
+# 2. Variables all uppercase can be read/written, but will be also
+#     used by the CD engine
+# 3. All other non-numbered variable patterns are up for grabs by the
+#     user (numbered variables refer to parameters)
+# 4. `$(symbol)` is parsed as a variable substitution
+# 5. `$(symbol text text ....)` is parsed as a builtin command,
+#    the results of which are substituted. See "BUILTIN COMMANDS"
+#    in the docs.
+# 6. All variables are arrays:
+#     `$(var)`       shorthand for `$(var[0])`
+#     `var = name`   shorthand for `var[0] = name`
+#     `$(var[#])`    The number of elements in the array
+#     `$(var[*])`    A single string containing all the elements,
+#                    separated by a single space character
+#     `$(var[@])`    A single string containing all the elements,
+#                    in array syntax, i.e. [ el-1, el-2, .... el-n ]
+# 7. The uppercase variables are as follows:
+#     NAME              Sets a name for the node (job, deployment, etc)
+#     _WORKING_PATH     Constant containing the execution directory
+#     END_SIGNAL        The signal to generate on successful completion
+#     START_SIGNAL      Deployment will start when this signal is rxed
+#     MESSAGE           A message that the node will log when invoked
+#     EXEC              A command that will be executed when node is invoked
+#     ROLLBACK          A command that will be exxcuted on node failure
+#     JOBS              An ordered array of jobs to execute
+#
+# Mechanism:
+# All the *.kubeka files are parsed into memory as a tree of nodes. Nodes
+# are then invoked at periodic intervals or on receipt of a SIGNAL (not
+# to be confused with POSIX signals). On tree creation, some sanity checks
+# are applied:
+#     - All substitutions must resolve.
+#     - JOB nodes must have the following symbols defined:
+#        NAME
+#        MESSAGE
+#        EXEC xor JOBS
+#     - DEPLOYMENT nodes must have the following symbols:
+#        DEPLOYMENT
+#        END_SIGNAL
+#        START_SIGNAL xor REPEAT
+#
+# Invocation is performed by shelling out and executing $(EXEC), or by
+# executing all elements of $(JOBS) in order (sanity check ensures that
+# only one will be set).
+#
+# Each node has the following fields:
+#     type        The type of node (deployment, job, etc)
+#     symtab      A symbol table
+#     parent      A pointer to a parent node
+#     children    An array of child nodes.
+#
+# Symbol table:
+#  The symtab (symbol table) is a dynamically scoped table of symbols
+#  which is a hashtable of {symbol:string[]}, ie a symbol matches an
+#  array of strings.
+#
+
+DEPLOYMENT = My First deployment
+_WORKING_PATH = /some/other/path  # Must result in an error, reserved
+END_SIGNAL = Signal to be emitted when this deployment completes (any string)
+START_SIGNAL = Signal to wait for to start this deployment
+# Alternatively, run every minute (never concurrently, though. The delay
+# timer only starts ticking when a deployment is complete).
+REPEAT = 5m
+
+# Some variables set by the user
+appname = $(env_read APPNAME)
+git_origin = ssh://some-origin/some-repo.git
+git_branch = master
+build_artifacts =
+build_artifacts = $(build_artifacts) bin/program
+build_artifacts = $(build_artifacts) info/release-info.txt
+target_directory = /var/www/$(appname)
+
+[job]
+NAME = Full deployment
+MESSAGE = Performing a full deployment
+JOBS[] = [ build, upgrade, Done ]
+
+[job]
+NAME = build
+MESSAGE Starting build process
+JOBS[] = [ Check changes, checkout, Build thing, test, package ]
+
+[job]
+NAME = upgrade
+MESSAGE = Performing upgrade
+JOBS[] = [ pre-deployment, Upgrade DB, Copy files]
+
+[job]
+NAME = Check changes
+MESSAGE = Checking if sources changed, will continue only if sources changed
+# Options for ON_ERROR (default abort):
+# end:         End processing: error=false, signal=false
+# abort:       End processing: error=true, signal=false
+# succeed:     End processing: error=false, signal=true
+# psychotic:   End processing: error=true, signal=true
+# ignore:      Continue processing: error=false
+# warn:        Continue processing: error=true
+ON_ERROR = end
+EXEC =
+EXEC = $(EXEC) if [ `git  ls-remote $(git_origin) heads/master | cut -f 1 ` == $(current HASH)]; then
+EXEC = $(EXEC)    exit -1;
+EXEC = $(EXEC) else
+EXEC = $(EXEC)    exit 0;
+
+[job]
+NAME = checkout   # Comments work like this
+MESSAGE = A single long line message up to 8kb
+ROLLBACK = # Nothing to do if this fails
+EXEC = git clone $(git_origin) && git checkout $(git_branch) $(_WORKING_PATH)
+
+[job]
+NAME = Build thing
+MESSAGE = Building $(_JOB) for $(_DEPLOYMENT) with parameter $1
+ROLLBACK = # Nothing to do if this fails
+EXEC = make $1
+
+[job]
+NAME = test
+MESSAGE = Testing $(_DEPLOYMENT)
+ROLLBACK = # Nothing to do if this fails
+EXEC = test.sh
+
+[job]
+NAME = package
+MESSAGE = Packaging $(_DEPLOYMENT)
+EXEC = tar -zcvf $(_TMPDIR)/$(env_read APPNAME).tar.gz $(build_artifacts)
+
+[job]
+NAME = pre-deployment
+MESSAGE = Deploying to $(target_directory)
+WORKING_DIR = $(target_directory)
+EXEC = systemctl stop && tar -zxvf $(env_read APPNAME)
+
+[job]
+NAME = Upgrade DB
+MESSAGE = Upgrading database
+WORKING_DIR = $(target_directory)
+ROLLBACK = $(exec ./rollback.sh)
+EXEC = db/upgrade.sh
+
+[job]
+NAME = Copy files
+MESSAGE = Copying files to $(target_directory)
+EXEC = cp -Rv $(artifacts) $(target_directory)
+
+[job]
+NAME = Done
+MESSAGE = Setting finished variables
+HASH = $(exec git log -1 | head -n 1 | cut -f 1 -d \  )
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
