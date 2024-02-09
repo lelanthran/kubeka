@@ -1,0 +1,187 @@
+ Ideally, need to specify stages, jobs, etc.
+
+ Idea 1: s-expressions
+
+(define-job (name "clone")
+            (parameters
+              (string 'url))
+            (command "git clone $(url)"))
+
+(define-job (name "make")
+            (parameters
+              (string 'target))
+            (command "make $(target)"))
+
+(define-job (name "packaging")
+            (parameters
+              (string 'dst-fname
+                      'src-files))
+            (command "tar -zcvf $(dst-fname) $(src-files)"))
+
+(define-stage (name "checkout")
+              (message "Checkout out $(git-url) ...")
+              (job "clone"))
+
+(define-stage (name "build")
+              (message "Running debug build ...")
+              (command "make debug")
+              (job "make"))
+
+(define-stage (name "test")
+              (message "Running tests ....")
+              (job (define-job (command "test.sh"))))
+
+(define-stage ("packaging")
+              (message "Packaging ...")
+              (job "packaging"))
+
+(define-pipeline (name "pipeline-1")
+                 (steps
+                   "checkout"
+                   "build"
+                   "test"
+                   "packaging"))
+
+Idea 2: Arbitrary node definition
+[job]
+   name: "clone"
+   command: "git clone $params[0]"
+
+[job]
+   name: "build"
+   command: "make $params[0]"
+
+[job]
+   name: "test"
+   command: "test.sh"
+
+[job]
+   name: "packaging"
+   command: "tar -zcvf $params[*]"
+
+[stage]
+   name: "checkout"
+   message: "Checking out $params[0]"
+   job: "clone"
+
+[stage]
+   name: "make"
+   message: "Building $params[0]"
+   job: "make"
+
+[stage]
+   name: "test"
+   message: "Testing $params[0]"
+   job: "test"
+
+[stage]
+   name: "packaging"
+   message: "packaging $params[0]"
+   job: "packaging"
+
+[pipeline]
+   name: "deploy rundata"
+   stages: "checkout", "make", "test", "packaging"
+
+
+Idea 3: simple and to the point - gitcrond
+# Repo            branch         interval    command
+/some/git/repo    some/branch    5m          ./build.sh && ./test.sh && deploy.sh
+
+
+Idea 4:  Simple, with extras
+
+--- deployment-name.conf ---
+
+# 1. Variables with a leading underscore cannot be set (constants)
+# 2. Variables all uppercase can be read/written, but will be also
+#     used by the CD engine
+# 3. All other variable patterns are up for grabs by the user
+# 4. `$(symbol)` is parsed as a variable substitution
+# 5. `S(symbol text text ....)` is parsed as a builtin command,
+#    the results of which are substituted. See "BUILTIN COMMANDS"
+#    in the docs.
+# 6. All variables are arrays, with $(var) shorthand for $(var[0])
+# 7. 
+
+DEPLOYMENT = My First deployment
+_WORKING_PATH = /some/other/path  # Must result in an error, reserved
+END_SIGNAL = Signal to be emitted when this deployment completes (any string)
+START_SIGNAL = Signal to wait for to start this deployment
+# Alternatively, run every minute (never concurrently, though. The delay
+# timer only starts ticking when a deployment is complete).
+REPEAT = 5m
+
+# Some variables set by the user
+home = $(env_read HOME)
+git_origin = ssh://some-origin/some-repo.git
+git_branch = master
+build_artifacts += bin/program
+build_artifacts += info/release-info.txt
+
+[stage]
+NAME = Check changes
+MESSAGE = Checking if sources changed
+ON_ERROR = end  # ignore, abort with error (default), end (no error generated)
+exec = if [ `git  ls-remote $(git_origin) heads/master | cut -f 1 ` == $(current HASH)]; then
+exec = $(EXEC) exit -1;
+exec = $(EXEC) else
+exec = $(EXEC) exit 0;
+
+
+[stage]
+NAME = checkout   # Comments work like this
+message = A single long line message up to 8kb
+exec = git clone $(git_origin) && git checkout $(git_branch) $(_WORKING_PATH)
+
+[stage]
+NAME = build
+message = Building $(_STAGE) for $(_DEPLOYMENT)
+exec = make $target
+
+[stage]
+NAME = test
+message = Testing $(_DEPLOYMENT)
+exec = test.sh
+
+[stage]
+NAME = package
+message = Packaging $(_DEPLOYMENT)
+exec = tar -zcvf $(target_directory)/$(env_read APPNAME).tar.gz $(build_artifacts)
+
+[stage]
+NAME = pre-deployment
+MESSAGE = Deploying to $(target_directory)
+SWITCH_DIR = $(target_directory)
+exec = systemctl stop && tar -zxvf $(env_read APPNAME)
+
+[stage]
+NAME = Upgrade DB
+MESSAGE = Upgrading database
+SWITCH_DIR = $(target_directory) # Not really necessary
+exec = db/upgrade
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
