@@ -25,6 +25,10 @@
 #define PARSER_OUT       "./tests/output/kbnode.txt"
 #define PARSER_EXP       "./tests/expected/kbnode.txt"
 
+#define RO_IN        "./tests/input/kbnode-set-ro.txt"
+#define RO_OUT       "./tests/output/kbnode-set-ro.txt"
+#define RO_EXP       "./tests/expected/kbnode-set-ro.txt"
+
 static int t_parser (const char *ifname, const char *ofname)
 {
    int ret = EXIT_FAILURE;
@@ -32,13 +36,13 @@ static int t_parser (const char *ifname, const char *ofname)
    ds_array_t *nodes = ds_array_new ();
    FILE *outf = fopen (ofname, "w");
 
-   if (!nodes) {
-      fprintf (stderr, "Failed to create node collection\n");
+   if (!outf) {
+      fprintf (stderr, "Failed to open [%s] for writing: %m\n", ofname);
       goto cleanup;
    }
 
-   if (!outf) {
-      fprintf (stderr, "Failed to open [%s] for writing: %m\n", ofname);
+   if (!nodes) {
+      fprintf (stderr, "Failed to create node collection\n");
       goto cleanup;
    }
 
@@ -73,16 +77,19 @@ int main (void)
    int ret = 0;
    static struct {
       const char *name;
+      int expected_rc;
       const char *ifname;
       const char *ofname;
       const char *efname;
       int (*testfunc) (const char *, const char *);
    } tests[] = {
-      { "test_parser", PARSER_IN, PARSER_OUT, PARSER_EXP, t_parser },
+      { "test_parser",  EXIT_SUCCESS, PARSER_IN, PARSER_OUT, PARSER_EXP, t_parser },
+      { "test_ro",      EXIT_FAILURE, RO_IN, RO_OUT, RO_EXP, t_parser },
    };
 
    for (size_t i=0; i<sizeof tests/sizeof tests[0]; i++) {
       ret |= kbutil_test (tests[i].name,
+                          tests[i].expected_rc,
                           tests[i].ifname, tests[i].ofname, tests[i].efname,
                           tests[i].testfunc);
    }

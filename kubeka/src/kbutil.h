@@ -36,7 +36,7 @@ extern "C" {
 
    char *kbutil_file_read (const char *fname);
 
-   bool kbutil_test (const char *name,
+   bool kbutil_test (const char *name, int expected_rc,
                      const char *ifname, const char *ofname, const char *efname,
                      int (*testfunc) (const char *input,
                                       const char *output));

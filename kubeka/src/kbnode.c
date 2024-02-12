@@ -322,7 +322,7 @@ size_t kbnode_read_file (ds_array_t **dst, const char *fname)
             goto cleanup;
          }
 
-         if (!(kbsymtab_append (fname, lc, current->symtab, name, value))) {
+         if (!(kbsymtab_append (fname, lc, false, current->symtab, name, value))) {
             KBPARSE_ERROR (fname, lc, "Failed to append value to '%s': \n",
                   name);
             wcount++;
@@ -343,7 +343,7 @@ size_t kbnode_read_file (ds_array_t **dst, const char *fname)
             wcount++;
             goto cleanup;
          }
-         if (!(kbsymtab_set (fname, lc, current->symtab, name, value))) {
+         if (!(kbsymtab_set (fname, lc, false, current->symtab, name, value))) {
             KBPARSE_ERROR (fname, lc, "Error setting value for '%s': %s\n",
                   name, value);
             errno = ENOTSUP;

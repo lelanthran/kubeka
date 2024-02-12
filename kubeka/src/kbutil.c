@@ -106,7 +106,7 @@ char **kbutil_strarray_append (char ***dst, char *s)
 }
 
 
-bool kbutil_test (const char *name,
+bool kbutil_test (const char *name, int expected_rc,
                   const char *ifname, const char *ofname, const char *efname,
                   int (*testfunc) (const char *, const char *))
 {
@@ -114,7 +114,7 @@ bool kbutil_test (const char *name,
    int rc = testfunc (ifname, ofname);
    char *output = NULL, *expected = NULL;
 
-   if (rc != EXIT_SUCCESS) {
+   if (rc != expected_rc) {
       fprintf (stderr, "Error while running [%s:%s]\n", name, ifname);
       goto cleanup;
    }
