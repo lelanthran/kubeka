@@ -36,6 +36,11 @@ extern "C" {
 
    char *kbutil_file_read (const char *fname);
 
+   bool kbutil_test (const char *name,
+                     const char *ifname, const char *ofname, const char *efname,
+                     int (*testfunc) (const char *input,
+                                      const char *output));
+
    void kbutil_strarray_del (char **sa);
    char *kbutil_strarray_format (char **sa);
    size_t kbutil_strarray_length (char **sa);

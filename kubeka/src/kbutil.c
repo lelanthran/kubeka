@@ -11,6 +11,8 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdbool.h>
+#include <string.h>
 
 #include "ds_str.h"
 
@@ -101,6 +103,48 @@ char **kbutil_strarray_append (char ***dst, char *s)
    tmp [n + 1] = NULL;
    *dst = tmp;
    return *dst;
+}
+
+
+bool kbutil_test (const char *name,
+                  const char *ifname, const char *ofname, const char *efname,
+                  int (*testfunc) (const char *, const char *))
+{
+   bool error = true;
+   int rc = testfunc (ifname, ofname);
+   char *output = NULL, *expected = NULL;
+
+   if (rc != EXIT_SUCCESS) {
+      fprintf (stderr, "Error while running [%s:%s]\n", name, ifname);
+      goto cleanup;
+   }
+
+   if (!(output = kbutil_file_read (ofname))) {
+      fprintf (stderr, "Failed to read in file %s: %m\n", ofname);
+      goto cleanup;
+   }
+   if (!(expected = kbutil_file_read (efname))) {
+      fprintf (stderr, "Failed to read in file %s: %m\n", efname);
+      goto cleanup;
+   }
+
+   size_t olen = strlen (output);
+   size_t elen = strlen (expected);
+
+   if (olen != elen
+         || (memcmp (output, expected, strlen (output))) != 0) {
+      fprintf (stderr, "Unexpected output, run a diff on [%s] and [%s]\n",
+               efname, ofname);
+      goto cleanup;
+   }
+
+   error = false;
+cleanup:
+
+   free (output);
+   free (expected);
+   printf ("TEST (%s): %s\n", name, error ? "failed" : "passed");
+   return !error;
 }
 
 
