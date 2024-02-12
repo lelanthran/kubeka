@@ -1,3 +1,14 @@
+         /* ****************************************************** *
+          * Copyright ©2024 Run Data Systems,  All rights reserved *
+          *                                                        *
+          * This content is the exclusive intellectual property of *
+          * Run Data Systems, Gauteng, South Africa.               *
+          *                                                        *
+          * See the file COPYRIGHT for more information.           *
+          *                                                        *
+          * ****************************************************** */
+
+
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -8,40 +19,11 @@
 #include "ds_array.h"
 
 #include "kbnode.h"
+#include "kbutil.h"
 
 #define FNAME_INPUT     "./tests/input/kbnode.txt"
 #define FNAME_OUTPUT    "./tests/output/kbnode.txt"
 #define FNAME_EXPECTED  "./tests/expected/kbnode.txt"
-
-// TODO: Move this, as well as the strarray functions, into a utility module.
-char *file_read (const char *fname)
-{
-   FILE *inf = fopen (fname, "r");
-   if (!inf) {
-      fprintf (stderr, "Failed to open [%s] for reading: %m\n", fname);
-      return NULL;
-   }
-
-   char *ret = NULL;
-   fseek (inf, 0, SEEK_END);
-   long len = ftell (inf);
-   fseek (inf, 0, SEEK_SET);
-
-   if (!(ret = calloc (len + 1, 1))) {
-      fprintf (stderr, "Failed to allocate memory %li bytes\n", len);
-      fclose (inf);
-   }
-
-   size_t nbytes = 0;
-   if ((nbytes = fread (ret, 1, len, inf)) != (size_t)len) {
-      fprintf (stderr, "Failed to read entire file: %zu/%li read\n", nbytes, len);
-      free (ret);
-      ret = NULL;
-   }
-
-   fclose (inf);
-   return ret;
-}
 
 int main (void)
 {
@@ -76,11 +58,11 @@ int main (void)
    fclose (outf);
    outf = NULL;
 
-   if (!(output = file_read (FNAME_OUTPUT))) {
+   if (!(output = kbutil_file_read (FNAME_OUTPUT))) {
       fprintf (stderr, "Failed to read in file %s: %m\n", FNAME_OUTPUT);
       goto cleanup;
    }
-   if (!(expected = file_read (FNAME_EXPECTED))) {
+   if (!(expected = kbutil_file_read (FNAME_EXPECTED))) {
       fprintf (stderr, "Failed to read in file %s: %m\n", FNAME_EXPECTED);
       goto cleanup;
    }
@@ -107,6 +89,8 @@ cleanup:
    if (outf) {
       fclose (outf);
    }
+   printf ("TEST (%s:%s): %s\n", __FILE__, __func__,
+         ret == EXIT_SUCCESS ? "passed" : "failed");
    return ret;
 }
 

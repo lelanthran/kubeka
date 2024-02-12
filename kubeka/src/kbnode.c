@@ -1,3 +1,14 @@
+         /* ****************************************************** *
+          * Copyright ©2024 Run Data Systems,  All rights reserved *
+          *                                                        *
+          * This content is the exclusive intellectual property of *
+          * Run Data Systems, Gauteng, South Africa.               *
+          *                                                        *
+          * See the file COPYRIGHT for more information.           *
+          *                                                        *
+          * ****************************************************** */
+
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <errno.h>
