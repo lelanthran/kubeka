@@ -22,86 +22,11 @@
 #include "ds_str.h"
 
 #include "kbnode.h"
-
-#define WARN(...)     do {\
-   fprintf (stderr, "[%s:%i] Program warning: ", __FILE__, __LINE__);\
-   fprintf (stderr, __VA_ARGS__);\
-} while (0)
-
-#define ERROR(...)     do {\
-   fprintf (stderr, "[%s:%i] Program error: ", __FILE__, __LINE__);\
-   fprintf (stderr, __VA_ARGS__);\
-} while (0)
-
-#define PARSE_ERROR(fname,line, ...)     do {\
-   fprintf (stderr, "Error :%s+%zu: ", fname, line);\
-   fprintf (stderr, __VA_ARGS__);\
-} while (0)
-
-
+#include "kbutil.h"
 
 /* ***********************************************************
  * Misc utility functions
  */
-void strarray_del (char **sa)
-{
-   for (size_t i=0; sa && sa[i]; i++) {
-      free (sa[i]);
-   }
-   free (sa);
-}
-
-char *strarray_format (char **sa)
-{
-   char *ret = ds_str_dup ("[ ");
-   const char *delim = "";
-   for (size_t i=0; sa && sa[i]; i++) {
-      if (!(ds_str_append (&ret, delim, sa[i], " ", NULL))) {
-         ERROR ("OOM error formatting array\n");
-         free (ret);
-         return NULL;
-      }
-      delim = ",";
-   }
-   if (!(ds_str_append (&ret, "]", NULL))) {
-      free (ret);
-      return NULL;
-   }
-
-   return ret;
-}
-
-size_t strarray_length (char **sa)
-{
-   size_t ret = 0;
-   if (!sa || !sa[0])
-      return 0;
-
-   for (size_t i=0; sa[i]; i++) {
-      ret++;
-   }
-   return ret;
-}
-
-char **strarray_append (char ***dst, char *s)
-{
-   if (!dst || !s) {
-      return NULL;
-   }
-
-   size_t n = strarray_length (*dst);
-   char **tmp = realloc (*dst, (sizeof *dst) * (n + 2));
-   if (!tmp) {
-      return NULL;
-   }
-
-   tmp [n] = s;
-   tmp [n + 1] = NULL;
-   *dst = tmp;
-   return *dst;
-}
-
-
 static char **parse_value (char *value)
 {
    char **ret = NULL;
@@ -174,7 +99,7 @@ static void symtab_dump (const struct symtab_t *s, FILE *outf)
    char **keys = NULL;
    size_t nkeys = ds_hmap_keys (s->table, (void ***)&keys, NULL);
    if (nkeys == (size_t)-1) {
-      WARN ("Failed to retrieve elements of symbol table\n");
+      KBWARN ("Failed to retrieve elements of symbol table\n");
       return;
    }
 
@@ -183,11 +108,11 @@ static void symtab_dump (const struct symtab_t *s, FILE *outf)
    for (size_t i=0; i<nkeys && keys && keys[i]; i++) {
       char **value = NULL;
       if (!(ds_hmap_get_str_ptr(s->table, keys[i], (void **)&value, NULL))) {
-         WARN ("Failed to retrieve value for key [%s]\n", keys[i]);
+         KBWARN ("Failed to retrieve value for key [%s]\n", keys[i]);
       }
       free (tmp);
-      if (!(tmp = strarray_format (value))) {
-         ERROR ("OOM trying to format array [%s]\n", keys[i]);
+      if (!(tmp = kbutil_strarray_format (value))) {
+         KBERROR ("OOM trying to format array [%s]\n", keys[i]);
          goto cleanup;
       }
       fprintf (outf, "   %s: %s\n", keys[i], tmp);
@@ -213,14 +138,15 @@ static void symtab_clear (struct symtab_t *st)
    for (size_t i=0; i<nkeys && keys && keys[i]; i++) {
       char **values = NULL;
       if (!(ds_hmap_get_str_ptr (st->table, keys[i], (void **)&values, NULL))) {
-         WARN ("Failed to get known good key [%s]\n", keys[i]);
+         KBWARN ("Failed to get known good key [%s]\n", keys[i]);
       }
-      strarray_del (values);
+      kbutil_strarray_del (values);
    }
    free (keys);
    ds_hmap_del (st->table);
 }
 
+/*
 static char **symtab_get (struct symtab_t *st, const char *key)
 {
    if (!st)
@@ -228,10 +154,11 @@ static char **symtab_get (struct symtab_t *st, const char *key)
 
    char **ret = NULL;
    if (!(ds_hmap_get_str_ptr (st->table, key, (void **)&ret, NULL))) {
-      WARN ("Failed to find symbol [%s]\n", key);
+      KBWARN ("Failed to find symbol [%s]\n", key);
    }
    return ret;
 }
+*/
 
 enum keytype_t {
    keytype_ERROR = 0,
@@ -320,7 +247,7 @@ static bool symtab_set (const char *fname, size_t lc,
 
    // Normalise the key (remove the `[]`)
    if (!(keycopy = ds_str_dup (key))) {
-      PARSE_ERROR (fname, lc, "OOM Error copying key\n");
+      KBPARSE_ERROR (fname, lc, "OOM Error copying key\n");
       goto cleanup;
    }
    char *tmp = strchr (keycopy, '[');
@@ -331,13 +258,13 @@ static bool symtab_set (const char *fname, size_t lc,
    // Determine what type of key this is
    enum keytype_t keytype = detect_keytype (keycopy, &index);
    if (keytype == keytype_ERROR) {
-      PARSE_ERROR (fname, lc, "Unrecognised key syntax: `%s`\n", value);
+      KBPARSE_ERROR (fname, lc, "Unrecognised key syntax: `%s`\n", value);
       goto cleanup;
    }
 
    // Split the value into an array of values
    if (!(varray = parse_value (value))) {
-      PARSE_ERROR (fname, lc, "OOM trying to parse '%s'\n", value);
+      KBPARSE_ERROR (fname, lc, "OOM trying to parse '%s'\n", value);
       goto cleanup;
    }
 
@@ -348,13 +275,13 @@ static bool symtab_set (const char *fname, size_t lc,
    // new value and return success
    if (!existing) {
       if (keytype != keytype_INDEX || index != 0) {
-         PARSE_ERROR (fname, lc, "%i:%zu: Expected `%s` or `%s[0]`, found `%s`\n",
+         KBPARSE_ERROR (fname, lc, "%i:%zu: Expected `%s` or `%s[0]`, found `%s`\n",
                keytype, index, keycopy, keycopy, keycopy);
          goto cleanup;
       }
 
       if (!(ds_hmap_set_str_ptr (st->table, keycopy, varray, 0))) {
-         PARSE_ERROR (fname, lc, "OOM Error creating [%s]\n", keycopy);
+         KBPARSE_ERROR (fname, lc, "OOM Error creating [%s]\n", keycopy);
          goto cleanup;
       }
       varray = NULL; // Don't free this in cleanup
@@ -366,17 +293,17 @@ static bool symtab_set (const char *fname, size_t lc,
    // indexed element within it.
 
    // If the index is out of bounds, error out of this function
-   size_t nstrings = strarray_length (existing);
+   size_t nstrings = kbutil_strarray_length (existing);
    if (index >= nstrings) {
-      PARSE_ERROR (fname, lc, "Out of bounds write to `%s` at index %zu\n",
+      KBPARSE_ERROR (fname, lc, "Out of bounds write to `%s` at index %zu\n",
             keycopy, index);
       goto cleanup;
    }
    // If the passed in value is an array, refuse to store array within an
    // array
-   size_t varray_len = strarray_length (varray);
+   size_t varray_len = kbutil_strarray_length (varray);
    if (varray_len > 1) {
-      PARSE_ERROR (fname, lc, "Cannot insert array `%s` into array at `%s[%zu]`\n",
+      KBPARSE_ERROR (fname, lc, "Cannot insert array `%s` into array at `%s[%zu]`\n",
             value, keycopy, index);
       goto cleanup;
    }
@@ -390,13 +317,13 @@ static bool symtab_set (const char *fname, size_t lc,
    // Otherwise, free the existing value and replace it with the new value
    free (existing[index]);
    if (!(existing[index] = ds_str_dup (varray[0]))) {
-      PARSE_ERROR (fname, lc, "OOM error copying varray[0]: `%s`\n", varray[0]);
+      KBPARSE_ERROR (fname, lc, "OOM error copying varray[0]: `%s`\n", varray[0]);
       goto cleanup;
    }
 
    error = false;
 cleanup:
-   strarray_del (varray);
+   kbutil_strarray_del (varray);
    free (keycopy);
    return !error;
 }
@@ -406,12 +333,6 @@ static bool symtab_append (const char *fname, size_t lc,
 {
    bool error = true;
    char **existing = NULL;
-
-   enum {
-      append_ERROR = 0,
-      append_ELEMENT = 1,
-      append_STRING = 2,
-   } append_type = append_ERROR;
 
    size_t index = 0;
    enum keytype_t keytype = detect_keytype (key, &index);
@@ -426,7 +347,7 @@ static bool symtab_append (const char *fname, size_t lc,
    }
 
    if (keytype != keytype_INDEX && keytype != keytype_ARRAY) {
-      PARSE_ERROR (fname, lc, "%i:[%s]  Expected `%s` or `%s[]` or `%s[<number>]`, "
+      KBPARSE_ERROR (fname, lc, "%i:[%s]  Expected `%s` or `%s[]` or `%s[<number>]`, "
                    "found `%s` instead\n",
                    keytype, key,
                    keycopy, keycopy, keycopy, keycopy);
@@ -434,9 +355,9 @@ static bool symtab_append (const char *fname, size_t lc,
    }
 
    ds_hmap_get_str_ptr (st->table, keycopy, (void **)&existing, NULL);
-   size_t nexisting = ds_array_length (existing);
+   size_t nexisting = kbutil_strarray_length (existing);
    if (keytype == keytype_INDEX && nexisting && index >= nexisting) {
-      PARSE_ERROR (fname, lc, "Out of bounds write to `%s`\n", key);
+      KBPARSE_ERROR (fname, lc, "Out of bounds write to `%s`\n", key);
       goto cleanup;
    }
 
@@ -447,17 +368,17 @@ static bool symtab_append (const char *fname, size_t lc,
       if (!newval) {
          goto cleanup;
       }
-      strarray_append (&existing, newval);
+      kbutil_strarray_append (&existing, newval);
    }
 
    if (keytype == keytype_INDEX) {
       if (nexisting == 0 || existing == NULL) {
          if (!(existing = calloc (2, sizeof *existing))) {
-            PARSE_ERROR (fname, lc, "Failed to allocate new array\n");
+            KBPARSE_ERROR (fname, lc, "Failed to allocate new array\n");
             goto cleanup;
          }
          if (!(existing[0] = ds_str_dup (""))) {
-            PARSE_ERROR (fname, lc, "Failed to allocate empty string\n");
+            KBPARSE_ERROR (fname, lc, "Failed to allocate empty string\n");
             goto cleanup;
          }
       }
@@ -575,7 +496,7 @@ static kbnode_t *node_new (const char *fname, size_t line,
    bool error = true;
    enum node_type_t type = node_type_type (typename);
    if (type == node_type_UNKNOWN) {
-      PARSE_ERROR (fname, line,
+      KBPARSE_ERROR (fname, line,
             "Attempt to create node of unknown type: '%s'\n", typename);
       return NULL;
    }
@@ -687,15 +608,15 @@ size_t kbnode_read_file (ds_array_t **dst, const char *fname)
    char *name = NULL, *value = NULL;
 
    if (!(inf = fopen (fname, "r"))) {
-      ERROR ("Failed to open [%s] for reading: %m\n", fname);
+      KBERROR ("Failed to open [%s] for reading: %m\n", fname);
       goto cleanup;
    }
 
    // 1MB ought to be enough for everyone!
-   static const size_t line_len = 1024 * 1024;
+   static const int line_len = 1024 * 1024;
 
    if (!(line = malloc (line_len))) {
-      PARSE_ERROR (fname, lc, "Failed to allocate buffer for input\n");
+      KBPARSE_ERROR (fname, lc, "Failed to allocate buffer for input\n");
       errno = ENOMEM;
       goto cleanup;
    }
@@ -703,7 +624,7 @@ size_t kbnode_read_file (ds_array_t **dst, const char *fname)
    while (!feof (inf) && !ferror (inf) && fgets (line, line_len, inf)) {
       lc++;
       if ((tmp = strchr (line, '\r'))) {
-         PARSE_ERROR (fname, lc,
+         KBPARSE_ERROR (fname, lc,
                "Carriage return (\\r) detected on line %zu\n", lc);
          errno = EILSEQ; // TODO: Maybe Windows needs a different error?
          goto cleanup;
@@ -740,21 +661,21 @@ size_t kbnode_read_file (ds_array_t **dst, const char *fname)
          // mystrchr which returns the first non-escaped character.
          char *tmp = strchr (line, ']');
          if (!tmp) {
-            PARSE_ERROR (fname, lc, "Mangled input [%s]\n", line);
+            KBPARSE_ERROR (fname, lc, "Mangled input [%s]\n", line);
             wcount++;
             goto cleanup;
          }
          *tmp = 0;
 
          if (!(current = node_new (fname, lc, &line[1], NULL))) {
-            PARSE_ERROR (fname, lc,
+            KBPARSE_ERROR (fname, lc,
                   "Node creation attempt failure near: '%s'\n", &line[1]);
             wcount++;
             goto cleanup;
          }
 
          if (!(ds_array_ins_tail (*dst, current))) {
-            ERROR ("OOM appending new node %s to collection\n", line);
+            KBERROR ("OOM appending new node %s to collection\n", line);
             wcount++;
             goto cleanup;
          }
@@ -769,14 +690,14 @@ size_t kbnode_read_file (ds_array_t **dst, const char *fname)
       // Perform a concatenation with the existing value
       if ((strstr (line, "+="))) {
          if (!(parse_nv (&name, &value, line, "+="))) {
-            PARSE_ERROR (fname, lc, "Failed to read name/value pair near '%s'\n",
+            KBPARSE_ERROR (fname, lc, "Failed to read name/value pair near '%s'\n",
                   line);
             wcount++;
             goto cleanup;
          }
 
          if (!(symtab_append (fname, lc, &current->symtab, name, value))) {
-            PARSE_ERROR (fname, lc, "Failed to append value to '%s': \n",
+            KBPARSE_ERROR (fname, lc, "Failed to append value to '%s': \n",
                   name);
             wcount++;
             goto cleanup;
@@ -791,13 +712,13 @@ size_t kbnode_read_file (ds_array_t **dst, const char *fname)
       // Perform a simple assignment/creation/replacement
       if ((strchr (line, '='))) {
          if (!(parse_nv (&name, &value, line, "="))) {
-            PARSE_ERROR (fname, lc, "Failed to read name/value pair near '%s'\n",
+            KBPARSE_ERROR (fname, lc, "Failed to read name/value pair near '%s'\n",
                   line);
             wcount++;
             goto cleanup;
          }
          if (!(symtab_set (fname, lc, &current->symtab, name, value))) {
-            PARSE_ERROR (fname, lc, "Error setting value for '%s': %s\n",
+            KBPARSE_ERROR (fname, lc, "Error setting value for '%s': %s\n",
                   name, value);
             errno = ENOTSUP;
             wcount++;
@@ -810,7 +731,7 @@ size_t kbnode_read_file (ds_array_t **dst, const char *fname)
 
       // If we get here, it means that the line was not matched to any
       // pattern we support
-      PARSE_ERROR (fname, lc, "Unrecognised pattern in input '%s'\n", line);
+      KBPARSE_ERROR (fname, lc, "Unrecognised pattern in input '%s'\n", line);
       wcount++;
    }
 
