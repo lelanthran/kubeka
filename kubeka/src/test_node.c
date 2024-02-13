@@ -29,9 +29,9 @@
 #define RO_OUT          "./tests/output/kbnode-set-ro.txt"
 #define RO_EXP          "./tests/expected/kbnode-set-ro.txt"
 
-#define FILTER1_IN      "./tests/input/kbnode-filter.txt"
-#define FILTER1_OUT     "./tests/output/kbnode-filter.txt"
-#define FILTER1_EXP     "./tests/expected/kbnode-filter.txt"
+#define F1_IN           "./tests/input/kbnode-f1.txt"
+#define F1_OUT          "./tests/output/kbnode-f1.txt"
+#define F1_EXP          "./tests/expected/kbnode-f1.txt"
 
 static void dump_nodelist (ds_array_t *nodes, FILE *outf)
 {
@@ -116,6 +116,14 @@ static int t_filter (const char *ifname, const char *ofname)
    }
    dump_nodelist (f1, outf);
 
+   fprintf (outf, "f2 ====================================\n");
+   if (!(f2 = kbnode_filter_varname (nodes, "for_filter"))) {
+      fprintf (stderr, "Failed to filter by varname\n");
+      goto cleanup;
+   }
+   dump_nodelist (f2, outf);
+
+
    ret = EXIT_SUCCESS;
 cleanup:
    if (outf) {
@@ -149,7 +157,7 @@ int main (void)
    } tests[] = {
 { "test_parser",  EXIT_SUCCESS, PARSER_IN, PARSER_OUT, PARSER_EXP, t_parser },
 { "test_ro",      EXIT_FAILURE, RO_IN, RO_OUT, RO_EXP, t_parser },
-{ "filter1",      EXIT_SUCCESS, FILTER1_IN, FILTER1_OUT, FILTER1_EXP, t_filter },
+{ "filter1",      EXIT_SUCCESS, F1_IN, F1_OUT, F1_EXP, t_filter },
    };
 
    for (size_t i=0; i<sizeof tests/sizeof tests[0]; i++) {

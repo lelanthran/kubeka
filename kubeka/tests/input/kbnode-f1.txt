@@ -8,16 +8,19 @@ git_branch = master
 ID = Full deployment
 MESSAGE = Performing a full deployment
 JOBS[] = [ build, upgrade, Done ]
+for_filter = first node
 
 [cron]
 ID = build
 MESSAGE = Starting build process
 JOBS[] = [ Check changes, checkout, Build thing, test, package ]
+for_filter = second node
 
 [job]
 ID = upgrade
 MESSAGE = Performing upgrade
 JOBS[] = [ pre-deployment, Upgrade DB, Copy files]
+for_filter = third node
 
 [cron]
 ID = Check changes

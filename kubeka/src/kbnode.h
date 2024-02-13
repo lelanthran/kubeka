@@ -26,6 +26,7 @@ extern "C" {
    size_t kbnode_read_file (ds_array_t **dst, const char *fname);
 
    ds_array_t *kbnode_filter_type (ds_array_t *nodes, const char *type);
+   ds_array_t *kbnode_filter_varname (ds_array_t *nodes, const char *varname);
 
 
 #ifdef __cplusplus

@@ -425,4 +425,13 @@ ds_array_t *kbnode_filter_type (ds_array_t *nodes, const char *type)
    return ds_array_filter (nodes, node_filter_func, &filter_spec);
 }
 
+ds_array_t *kbnode_filter_varname (ds_array_t *nodes, const char *varname)
+{
+   struct filter_spec_t filter_spec = {
+      filter_type_NAME, varname
+   };
+
+   return ds_array_filter (nodes, node_filter_func, &filter_spec);
+}
+
 
