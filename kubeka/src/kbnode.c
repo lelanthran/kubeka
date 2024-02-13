@@ -382,4 +382,47 @@ cleanup:
    return wcount;
 }
 
+enum filter_type_t {
+   filter_type_NONE = 0,
+   filter_type_TYPE,
+   filter_type_NAME,
+   // filter_type_VALUE, RFU
+};
+
+struct filter_spec_t {
+   enum filter_type_t type;
+   const char *sterm;
+};
+
+static bool node_filter_func (const void *element, void *param)
+{
+   const kbnode_t *node = element;
+   const struct filter_spec_t *spec = param;
+   enum node_type_t type = node_type_UNKNOWN;
+
+   switch (spec->type) {
+      case filter_type_TYPE:
+         type = node_type_type (spec->sterm);
+         return (node->type == type) ? true : false;
+
+      case filter_type_NAME:
+         return (kbsymtab_exists (node->symtab, spec->sterm)) ? true : false;
+
+      case filter_type_NONE:
+      default:
+         break;
+   }
+   return false;
+}
+
+
+ds_array_t *kbnode_filter_type (ds_array_t *nodes, const char *type)
+{
+   struct filter_spec_t filter_spec = {
+      filter_type_TYPE, type
+   };
+
+   return ds_array_filter (nodes, node_filter_func, &filter_spec);
+}
+
 

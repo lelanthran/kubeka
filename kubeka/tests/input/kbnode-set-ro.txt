@@ -1,0 +1,28 @@
+[job]
+appname = $(env_read APPNAME)
+git_origin = ssh://some-origin/some-repo.git
+git_branch = master
+build_artifacts =
+build_artifacts = $(build_artifacts) bin/program
+build_artifacts = $(build_artifacts) info/release-info.txt
+target_directory = /var/www/$(appname)
+test_string = one
+test_string += two
+test_string += three
+test_array = [four, five, six]
+test_array[] += seven
+test_empty_array[] += eight
+test_empty_string += nine
+
+
+[job]
+ID = Full deployment
+MESSAGE = Performing a full deployment
+_SOMEVAR = This should fail on this line
+JOBS[] = [ build, upgrade, Done ]
+
+[job]
+ID = build
+MESSAGE = Starting build process
+JOBS[] = [ Check changes, checkout, Build thing, test, package ]
+

@@ -12,7 +12,8 @@ as testing, deployments, etc.
 
 ## MECHANISM
 The input files are parsed into an execution tree and the tree is linted
-to detect as many errors as possible.
+to detect as many errors as possible. A linting failure prevents the
+daemon from proceeding.
 
 The input file is a simple list of `nodes`. A `node` must be one of many
 predefined types. A node contains a collection of variables which are

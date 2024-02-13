@@ -21,13 +21,25 @@
 #include "kbnode.h"
 #include "kbutil.h"
 
-#define PARSER_IN        "./tests/input/kbnode.txt"
-#define PARSER_OUT       "./tests/output/kbnode.txt"
-#define PARSER_EXP       "./tests/expected/kbnode.txt"
+#define PARSER_IN       "./tests/input/kbnode.txt"
+#define PARSER_OUT      "./tests/output/kbnode.txt"
+#define PARSER_EXP      "./tests/expected/kbnode.txt"
 
-#define RO_IN        "./tests/input/kbnode-set-ro.txt"
-#define RO_OUT       "./tests/output/kbnode-set-ro.txt"
-#define RO_EXP       "./tests/expected/kbnode-set-ro.txt"
+#define RO_IN           "./tests/input/kbnode-set-ro.txt"
+#define RO_OUT          "./tests/output/kbnode-set-ro.txt"
+#define RO_EXP          "./tests/expected/kbnode-set-ro.txt"
+
+#define FILTER1_IN      "./tests/input/kbnode-filter.txt"
+#define FILTER1_OUT     "./tests/output/kbnode-filter.txt"
+#define FILTER1_EXP     "./tests/expected/kbnode-filter.txt"
+
+static void dump_nodelist (ds_array_t *nodes, FILE *outf)
+{
+   size_t nnodes = ds_array_length (nodes);
+   for (size_t i=0; i<nnodes; i++) {
+      kbnode_dump ((kbnode_t *)ds_array_get (nodes, i), outf);
+   }
+}
 
 static int t_parser (const char *ifname, const char *ofname)
 {
@@ -51,10 +63,7 @@ static int t_parser (const char *ifname, const char *ofname)
       goto cleanup;
    }
 
-   size_t nnodes = ds_array_length (nodes);
-   for (size_t i=0; i<nnodes; i++) {
-      kbnode_dump ((kbnode_t *)ds_array_get (nodes, i), outf);
-   }
+   dump_nodelist (nodes, outf);
 
    ret = EXIT_SUCCESS;
 cleanup:
@@ -62,7 +71,7 @@ cleanup:
       fclose (outf);
    }
 
-   nnodes = ds_array_length (nodes);
+   size_t nnodes = ds_array_length (nodes);
    for (size_t i=0; i<nnodes; i++) {
       kbnode_t *node = ds_array_get (nodes, i);
       kbnode_del (node);
@@ -71,6 +80,61 @@ cleanup:
 
    return ret;
 }
+
+static int t_filter (const char *ifname, const char *ofname)
+{
+   int ret = EXIT_FAILURE;
+
+   ds_array_t *nodes = ds_array_new ();
+
+   ds_array_t *f1 = NULL, *f2 = NULL, *f3 = NULL;
+
+   FILE *outf = fopen (ofname, "w");
+
+   if (!outf) {
+      fprintf (stderr, "Failed to open [%s] for writing: %m\n", ofname);
+      goto cleanup;
+   }
+
+   if (!nodes) {
+      fprintf (stderr, "Failed to create node collection\n");
+      goto cleanup;
+   }
+
+   if ((kbnode_read_file (&nodes, ifname))) {
+      fprintf (stderr, "Failed to parse [%s]: %m\n", ifname);
+      goto cleanup;
+   }
+
+   // Print out all the nodes
+   dump_nodelist (nodes, outf);
+
+   fprintf (outf, "f1 ====================================\n");
+   if (!(f1 = kbnode_filter_type (nodes, "cron"))) {
+      fprintf (stderr, "Failed to filter by type\n");
+      goto cleanup;
+   }
+   dump_nodelist (f1, outf);
+
+   ret = EXIT_SUCCESS;
+cleanup:
+   if (outf) {
+      fclose (outf);
+   }
+
+   size_t nnodes = ds_array_length (nodes);
+   for (size_t i=0; i<nnodes; i++) {
+      kbnode_t *node = ds_array_get (nodes, i);
+      kbnode_del (node);
+   }
+   ds_array_del (nodes);
+   ds_array_del (f1);
+   ds_array_del (f2);
+   ds_array_del (f3);
+
+   return ret;
+}
+
 
 int main (void)
 {
@@ -83,8 +147,9 @@ int main (void)
       const char *efname;
       int (*testfunc) (const char *, const char *);
    } tests[] = {
-      { "test_parser",  EXIT_SUCCESS, PARSER_IN, PARSER_OUT, PARSER_EXP, t_parser },
-      { "test_ro",      EXIT_FAILURE, RO_IN, RO_OUT, RO_EXP, t_parser },
+{ "test_parser",  EXIT_SUCCESS, PARSER_IN, PARSER_OUT, PARSER_EXP, t_parser },
+{ "test_ro",      EXIT_FAILURE, RO_IN, RO_OUT, RO_EXP, t_parser },
+{ "filter1",      EXIT_SUCCESS, FILTER1_IN, FILTER1_OUT, FILTER1_EXP, t_filter },
    };
 
    for (size_t i=0; i<sizeof tests/sizeof tests[0]; i++) {
