@@ -229,7 +229,7 @@ void kbnode_dump (const kbnode_t *node, FILE *outf)
       return;
    }
 
-   fprintf (outf, "Node [%s] with parent [%p]: %" PRIx64 "\n",
+   fprintf (outf, "Node [%s] with parent [%p]: 0x%" PRIx64 "\n",
          node_type_name(node->type), node->parent, node->flags);
 
    kbsymtab_dump (node->symtab, outf);

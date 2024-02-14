@@ -10,7 +10,7 @@ const char *build_info_kubeka_version (void) {
 } 
  
 const char *build_info_kubeka_githash (void) { 
-   return "a96a88045ff066cedd8548a2ab3135c70ed37681"; 
+   return "0ec87153de4c32da34bfb64ef9baa0e5feaa2065"; 
 } 
  
 const char *build_info_kubeka_gitbranch (void) { 
@@ -38,7 +38,7 @@ const char *build_info_kubeka_build (void) {
 } 
  
 const char *build_info_kubeka_timestamp (void) { 
-   return "1707884754"; 
+   return "1707894299"; 
 } 
  
 const char *build_info_kubeka_homepage (void) { 
