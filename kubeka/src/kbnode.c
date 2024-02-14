@@ -16,6 +16,8 @@
 #include <stdbool.h>
 #include <ctype.h>
 #include <stdarg.h>
+#include <stdint.h>
+#include <inttypes.h>
 
 #include "ds_array.h"
 #include "ds_hmap.h"
@@ -76,6 +78,7 @@ struct kbnode_t {
    kbsymtab_t *symtab;
    kbnode_t *parent;
    ds_array_t *children;
+   uint64_t flags;
 };
 
 static size_t node_find_child (kbnode_t *node, kbnode_t *child)
@@ -121,10 +124,14 @@ static kbnode_t *node_new (const char *fname, size_t line,
 {
    bool error = true;
    enum node_type_t type = node_type_type (typename);
+   char sline[45];
+
+   snprintf (sline, sizeof sline, "%zu", line);
+
    if (type == node_type_UNKNOWN) {
       KBPARSE_ERROR (fname, line,
             "Attempt to create node of unknown type: '%s'\n", typename);
-      return NULL;
+      goto cleanup;
    }
 
    errno = ENOMEM;
@@ -135,6 +142,12 @@ static kbnode_t *node_new (const char *fname, size_t line,
    }
 
    if (!(ret->symtab = kbsymtab_new ())) {
+      goto cleanup;
+   }
+
+   if (!(kbsymtab_set (fname, line, true, ret->symtab, "_FILENAME", fname)) ||
+         !((kbsymtab_set (fname, line, true, ret->symtab, "_LINE", sline)))) {
+      KBPARSE_ERROR (fname, line, "Failed to set default vars\n");
       goto cleanup;
    }
 
@@ -194,6 +207,19 @@ static bool parse_nv (char **name, char **value, char *line, const char *delim)
  */
 
 
+
+uint64_t kbnode_flags (kbnode_t *node)
+{
+   return node->flags;
+}
+
+void kbnode_flags_set (kbnode_t *node, uint64_t flags)
+{
+   node->flags = flags;
+}
+
+
+
 void kbnode_dump (const kbnode_t *node, FILE *outf)
 {
    if (!outf)
@@ -203,8 +229,8 @@ void kbnode_dump (const kbnode_t *node, FILE *outf)
       return;
    }
 
-   fprintf (outf, "Node [%s] with parent [%p]\n",
-         node_type_name(node->type), node->parent);
+   fprintf (outf, "Node [%s] with parent [%p]: %" PRIx64 "\n",
+         node_type_name(node->type), node->parent, node->flags);
 
    kbsymtab_dump (node->symtab, outf);
 

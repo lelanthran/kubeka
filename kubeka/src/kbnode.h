@@ -18,6 +18,8 @@ typedef struct kbnode_t kbnode_t;
 extern "C" {
 #endif
 
+   uint64_t kbnode_flags (kbnode_t *node);
+   void kbnode_flags_set (kbnode_t *node, uint64_t flags);
    void kbnode_dump (const kbnode_t *node, FILE *outf);
    void kbnode_del (kbnode_t *node);
 
@@ -27,6 +29,7 @@ extern "C" {
 
    ds_array_t *kbnode_filter_type (ds_array_t *nodes, const char *type);
    ds_array_t *kbnode_filter_varname (ds_array_t *nodes, const char *varname);
+
 
 
 #ifdef __cplusplus

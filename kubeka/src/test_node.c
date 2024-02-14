@@ -14,6 +14,7 @@
 #include <stdlib.h>
 #include <errno.h>
 #include <string.h>
+#include <stdint.h>
 #include <stdbool.h>
 
 #include "ds_array.h"

@@ -133,8 +133,8 @@ bool kbutil_test (const char *name, int expected_rc,
 
    if (olen != elen
          || (memcmp (output, expected, strlen (output))) != 0) {
-      fprintf (stderr, "Unexpected output, run a diff on [%s] and [%s]\n",
-               efname, ofname);
+      fprintf (stderr, "Unexpected output, run:\ndiff %s %s\n",
+               ofname, efname);
       goto cleanup;
    }
 
