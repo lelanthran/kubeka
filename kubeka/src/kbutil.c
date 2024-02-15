@@ -147,4 +147,35 @@ cleanup:
    return !error;
 }
 
+char **kbutil_strarray_copy (char **src)
+{
+   bool error = true;
+
+   char **ret = NULL;
+   size_t nitems = 1;
+   for (size_t i=0; src && src[i]; i++) {
+      nitems++;
+   }
+
+   if (!(ret = calloc (nitems, sizeof *ret))) {
+      KBERROR ("OOM creating string array\n");
+      goto cleanup;
+   }
+
+   for (size_t i=0; src && src[i]; i++) {
+      if (!(ret[i] = ds_str_dup (src[i]))) {
+         KBERROR ("OOM creating string\n");
+         goto cleanup;
+      }
+   }
+
+   error = false;
+
+cleanup:
+   if (error) {
+      kbutil_strarray_del (ret);
+      ret = NULL;
+   }
+   return ret;
+}
 

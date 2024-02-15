@@ -1,0 +1,5 @@
+[periodic]
+# ID = missing-required
+MESSAGE = Missing required variables for node
+EXEC = /bin/true
+# Note: Missing EXEC, JOBS and EMIT

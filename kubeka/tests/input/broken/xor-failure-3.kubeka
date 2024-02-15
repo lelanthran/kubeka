@@ -1,0 +1,14 @@
+[job]
+ID = xor-failure-3.1
+MESSAGE = Contains EXEC and JOBS
+EXEC = echo hello world
+JOBS = xor-failure-3.2
+
+
+[job]
+ID = xor-failure-3.2
+MESSAGE = Should not generate error (dependency should generate error)
+EMIT = NEVER-EMITTED-SIGNAL
+
+
+

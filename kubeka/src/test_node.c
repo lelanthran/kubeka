@@ -59,8 +59,11 @@ static int t_parser (const char *ifname, const char *ofname)
       goto cleanup;
    }
 
-   if ((kbnode_read_file (&nodes, ifname))) {
+   size_t e = 0;
+   size_t w = 0;
+   if (!(kbnode_read_file (nodes, ifname, &e, &w))) {
       fprintf (stderr, "Failed to parse [%s]: %m\n", ifname);
+      fprintf (stderr, "Errors: %zu, warnings: %zu\n", e, w);
       goto cleanup;
    }
 
@@ -102,8 +105,11 @@ static int t_filter (const char *ifname, const char *ofname)
       goto cleanup;
    }
 
-   if ((kbnode_read_file (&nodes, ifname))) {
+   size_t e = 0;
+   size_t w = 0;
+   if (!(kbnode_read_file (nodes, ifname, &e, &w))) {
       fprintf (stderr, "Failed to parse [%s]: %m\n", ifname);
+      fprintf (stderr, "Errors: %zu, warnings: %zu\n", e, w);
       goto cleanup;
    }
 
@@ -111,14 +117,14 @@ static int t_filter (const char *ifname, const char *ofname)
    dump_nodelist (nodes, outf);
 
    fprintf (outf, "f1 ====================================\n");
-   if (!(f1 = kbnode_filter_type (nodes, "cron"))) {
+   if (!(f1 = kbnode_filter_types (nodes, "periodic", NULL))) {
       fprintf (stderr, "Failed to filter by type\n");
       goto cleanup;
    }
    dump_nodelist (f1, outf);
 
    fprintf (outf, "f2 ====================================\n");
-   if (!(f2 = kbnode_filter_varname (nodes, "for_filter"))) {
+   if (!(f2 = kbnode_filter_varname (nodes, "for_filter", NULL))) {
       fprintf (stderr, "Failed to filter by varname\n");
       goto cleanup;
    }

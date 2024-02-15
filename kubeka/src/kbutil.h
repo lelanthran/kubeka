@@ -24,7 +24,12 @@
 } while (0)
 
 #define KBPARSE_ERROR(fname,line, ...)     do {\
-   fprintf (stderr, "Error :%s+%zu: ", fname, line);\
+   fprintf (stderr, "Error in %s:%zu: ", fname, line);\
+   fprintf (stderr, __VA_ARGS__);\
+} while (0)
+
+#define KBPARSE_WARN(fname,line, ...)     do {\
+   fprintf (stderr, "Warning in %s:%zu: ", fname, line);\
    fprintf (stderr, __VA_ARGS__);\
 } while (0)
 
@@ -45,6 +50,7 @@ extern "C" {
    char *kbutil_strarray_format (char **sa);
    size_t kbutil_strarray_length (char **sa);
    char **kbutil_strarray_append (char ***dst, char *s);
+   char **kbutil_strarray_copy (char **src);
 
 
 #ifdef __cplusplus

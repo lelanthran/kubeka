@@ -1,0 +1,20 @@
+[job]
+ID = 2000
+MESSAGE = This is my job: $(ID)
+HANDLES = SIGNAL: 1
+JOBS = 2001
+
+
+[job]
+ID = 2001
+MESSAGE = This is my job: $(ID)
+HANDLES = SIGNAL: 1
+EXEC = echo 'Hello $(ID)'
+
+
+[periodic]
+ID = 2002
+MESSAGE = This is an entrypoint: $(ID)
+EMIT = SIGNAL: 1
+
+

@@ -1,0 +1,24 @@
+# This file generates an error (recursive nodes).
+
+[job]
+ID = 4000
+MESSAGE = This is my job: $(ID)
+HANDLES = SIGNAL: 1
+JOBS = 4001
+
+
+[job]
+ID = 4001
+MESSAGE = This is my job: $(ID)
+HANDLES = SIGNAL: 1
+JOBS = 4000
+
+
+[periodic]
+ID = 4002
+MESSAGE = This is an entrypoint: $(ID)
+EMIT = SIGNAL: 1
+
+
+
+

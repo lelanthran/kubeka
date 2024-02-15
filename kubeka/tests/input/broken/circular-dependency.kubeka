@@ -1,0 +1,20 @@
+[job]
+ID = circular-dependency-1
+MESSAGE = circular-dependency-1
+JOBS = J2
+
+[job]
+ID = circular-dependency-2
+MESSAGE = circular-dependency-2
+JOBS = circular-dependency-3
+
+[job]
+ID =  circular-dependency-3
+MESSAGE = reference
+JOBS[] = [ circular-dependency-1 ]
+
+[manual]
+ID =   circular-dependency-manual
+MESSAGE = Starting node manually
+JOBS = circular-dependency-1
+

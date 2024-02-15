@@ -1,4 +1,4 @@
-[cron]
+[periodic]
 appname = $(env_read APPNAME)
 git_origin = ssh://some-origin/some-repo.git
 git_branch = master
@@ -10,7 +10,7 @@ MESSAGE = Performing a full deployment
 JOBS[] = [ build, upgrade, Done ]
 for_filter = first node
 
-[cron]
+[periodic]
 ID = build
 MESSAGE = Starting build process
 JOBS[] = [ Check changes, checkout, Build thing, test, package ]
@@ -22,7 +22,7 @@ MESSAGE = Performing upgrade
 JOBS[] = [ pre-deployment, Upgrade DB, Copy files]
 for_filter = third node
 
-[cron]
+[periodic]
 ID = Check changes
 MESSAGE = Checking if sources changed, will continue only if sources changed
 EXEC += if [ `git  ls-remote $(git_origin) heads/master | cut -f 1 ` == $(current HASH)]; then

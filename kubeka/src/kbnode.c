@@ -18,7 +18,9 @@
 #include <stdarg.h>
 #include <stdint.h>
 #include <inttypes.h>
+#include <limits.h>
 
+#include "ds_set.h"
 #include "ds_array.h"
 #include "ds_hmap.h"
 #include "ds_str.h"
@@ -26,6 +28,18 @@
 #include "kbnode.h"
 #include "kbsym.h"
 #include "kbutil.h"
+
+#define BUILTIN_FNAME      "_FILENAME"
+#define BUILTIN_LINE       "_LINE"
+#define BUILTIN_ID         "ID"
+#define BUILTIN_MESSAGE    "MESSAGE"
+#define BUILTIN_JOBS       "JOBS"
+#define BUILTIN_EXEC       "EXEC"
+#define BUILTIN_EMIT       "EMIT"
+
+#define INCPTR(x)    do {\
+   (x) = (x) + 1;\
+} while (0)
 
 /* ***********************************************************
  * Misc utility functions
@@ -36,17 +50,19 @@
 
 enum node_type_t {
    node_type_UNKNOWN = 0,
-   node_type_CRON,
+   node_type_PERIODIC,
    node_type_JOB,
+   node_type_ENTRYPOINT,
 };
 
 static const struct {
    enum node_type_t type;
    const char *name;
 } node_type_names[] = {
-   { node_type_UNKNOWN, "unknown node type"  },
-   { node_type_CRON,    "cron"               },
-   { node_type_JOB,     "job"                },
+   { node_type_UNKNOWN,       "unknown node type"     },
+   { node_type_PERIODIC,      KBNODE_TYPE_PERIODIC    },
+   { node_type_JOB,           KBNODE_TYPE_JOB         },
+   { node_type_ENTRYPOINT,    KBNODE_TYPE_ENTRYPOINT  },
 };
 
 static const char *node_type_name (enum node_type_t type)
@@ -95,6 +111,19 @@ static size_t node_find_child (kbnode_t *node, kbnode_t *child)
    return (size_t)-1;
 }
 
+static const kbnode_t *node_findbyid (ds_array_t *all, const char *id)
+{
+   size_t n = ds_array_length (all);
+   for (size_t i=0; i< n; i++) {
+      const kbnode_t *node = ds_array_get (all, i);
+      const char *node_id = kbsymtab_get_string (node->symtab, BUILTIN_ID);
+      if ((strcmp (node_id, id)) == 0) {
+         return node;
+      }
+   }
+   return NULL;
+}
+
 static void node_del (kbnode_t **node)
 {
    if (!node || !*node)
@@ -125,6 +154,7 @@ static kbnode_t *node_new (const char *fname, size_t line,
    bool error = true;
    enum node_type_t type = node_type_type (typename);
    char sline[45];
+   kbnode_t *ret = NULL;
 
    snprintf (sline, sizeof sline, "%zu", line);
 
@@ -136,7 +166,7 @@ static kbnode_t *node_new (const char *fname, size_t line,
 
    errno = ENOMEM;
 
-   kbnode_t *ret = calloc (1, sizeof *ret);
+   ret = calloc (1, sizeof *ret);
    if (!ret) {
       goto cleanup;
    }
@@ -145,8 +175,8 @@ static kbnode_t *node_new (const char *fname, size_t line,
       goto cleanup;
    }
 
-   if (!(kbsymtab_set (fname, line, true, ret->symtab, "_FILENAME", fname)) ||
-         !((kbsymtab_set (fname, line, true, ret->symtab, "_LINE", sline)))) {
+   if (!(kbsymtab_set (fname, line, true, ret->symtab, BUILTIN_FNAME, fname)) ||
+         !((kbsymtab_set (fname, line, true, ret->symtab,BUILTIN_LINE, sline)))) {
       KBPARSE_ERROR (fname, line, "Failed to set default vars\n");
       goto cleanup;
    }
@@ -170,6 +200,72 @@ cleanup:
    }
    return ret;
 }
+
+static const char *node_filename (const kbnode_t *node)
+{
+   return kbsymtab_get_string (node->symtab, BUILTIN_FNAME);
+}
+
+static int64_t node_line (const kbnode_t *node)
+{
+   return kbsymtab_get_int (node->symtab, BUILTIN_LINE);
+}
+
+static kbnode_t *node_instantiate (const kbnode_t *src, kbnode_t *parent,
+                                   ds_array_t *all,
+                                   size_t *errors, size_t *warnings)
+{
+   bool error = true;
+   const char **jobs = NULL;
+   const kbnode_t *ref = NULL;
+
+   // 1. Create a new node (fname and line don't matter here, it will be set
+   // below anyway during the cloning of the symbol table)
+   kbnode_t *ret = node_new ("", 0, node_type_name (src->type), parent);
+
+   // 2. Copy the symbol table (easier to just recreate it)
+   kbsymtab_del (ret->symtab);
+   if (!(ret->symtab = kbsymtab_copy (src->symtab))) {
+      KBERROR ("OOM creating new symbol table\n");
+      INCPTR (*errors);
+      goto cleanup;
+   }
+
+   // 3, Find all the children
+   if (!(jobs = kbsymtab_get (src->symtab, BUILTIN_JOBS))) {
+      // No JOBS[] to create children from, ignore
+      error = false;
+      goto cleanup;
+   }
+
+   // 4. Recursively create all children
+   for (size_t i=0; jobs && jobs[i]; i++) {
+      if (!(ref = node_findbyid (all, jobs[i]))) {
+         KBPARSE_ERROR (node_filename (src), node_line (src),
+               "Failed to find reference to job [%s]\n", jobs[i]);
+         INCPTR (*errors);
+         continue;
+      }
+
+      if (!(node_instantiate (ref, ret, all, errors, warnings))) {
+         KBPARSE_ERROR (node_filename (src), node_line (src),
+                  "Failed to instantiate child %zu [%s]\n", i, jobs[i]);
+         INCPTR (*errors);
+      }
+   }
+
+   error = false;
+
+cleanup:
+   if (error) {
+      node_del (&ret);
+      ret = NULL;
+   }
+
+   return ret;
+}
+
+
 
 
 /* ***********************************************************
@@ -207,6 +303,23 @@ static bool parse_nv (char **name, char **value, char *line, const char *delim)
  */
 
 
+int kbnode_cmp (const kbnode_t *lhs, size_t l1, const kbnode_t *rhs, size_t l2)
+{
+   (void)l1;
+   (void)l2;
+   if (!lhs || !rhs)
+      return -1;
+
+   const char **lhs_id = kbsymtab_get (lhs->symtab, "ID");
+   const char **rhs_id = kbsymtab_get (rhs->symtab, "ID");
+   if (!lhs_id || !lhs_id[0] || !rhs_id || !rhs_id[0])
+      return 1;
+
+   int ret = strcmp (lhs_id[0], rhs_id[0]);
+
+   return ret;
+}
+
 
 uint64_t kbnode_flags (kbnode_t *node)
 {
@@ -243,15 +356,40 @@ void kbnode_del (kbnode_t *node)
    node_del (&node);
 }
 
-size_t kbnode_read_file (ds_array_t **dst, const char *fname)
+bool kbnode_get_srcdef (kbnode_t *node, const char **fname, size_t *line)
+{
+   *line = 0;
+   *fname = NULL;
+
+   if (!node) {
+      return false;
+   }
+
+   const char **f = kbsymtab_get (node->symtab, BUILTIN_FNAME);
+   const char **l = kbsymtab_get (node->symtab, BUILTIN_LINE);
+   if (!f || !f[0] || !l || !l[0]) {
+      return false;
+   }
+
+   sscanf (l[0], "%zu", line);
+   *fname = f[0];
+   return true;
+}
+
+
+bool kbnode_read_file (ds_array_t *dst, const char *fname,
+                       size_t *nerrors, size_t *nwarnings)
 {
    errno = 0;
-   size_t wcount = 0;
+
+   *nerrors = 0;
+   *nwarnings = 0;
 
    char *line = NULL;
    char *tmp = NULL;
    size_t lc = 0;
    FILE *inf = NULL;
+   size_t nnodes = 0;
 
    kbnode_t *current = NULL;
 
@@ -259,6 +397,7 @@ size_t kbnode_read_file (ds_array_t **dst, const char *fname)
 
    if (!(inf = fopen (fname, "r"))) {
       KBERROR ("Failed to open [%s] for reading: %m\n", fname);
+      *nerrors = (*nerrors) + 1;
       goto cleanup;
    }
 
@@ -268,6 +407,7 @@ size_t kbnode_read_file (ds_array_t **dst, const char *fname)
    if (!(line = malloc (line_len))) {
       KBPARSE_ERROR (fname, lc, "Failed to allocate buffer for input\n");
       errno = ENOMEM;
+      *nerrors = (*nerrors) + 1;
       goto cleanup;
    }
 
@@ -277,6 +417,8 @@ size_t kbnode_read_file (ds_array_t **dst, const char *fname)
          KBPARSE_ERROR (fname, lc,
                "Carriage return (\\r) detected on line %zu\n", lc);
          errno = EILSEQ; // TODO: Maybe Windows needs a different error?
+         *nerrors = (*nerrors) + 1;
+         current = NULL;
          goto cleanup;
       }
 
@@ -312,7 +454,7 @@ size_t kbnode_read_file (ds_array_t **dst, const char *fname)
          char *tmp = strchr (line, ']');
          if (!tmp) {
             KBPARSE_ERROR (fname, lc, "Mangled input [%s]\n", line);
-            wcount++;
+            *nerrors = (*nerrors) + 1;
             goto cleanup;
          }
          *tmp = 0;
@@ -320,15 +462,16 @@ size_t kbnode_read_file (ds_array_t **dst, const char *fname)
          if (!(current = node_new (fname, lc, &line[1], NULL))) {
             KBPARSE_ERROR (fname, lc,
                   "Node creation attempt failure near: '%s'\n", &line[1]);
-            wcount++;
+            *nerrors = (*nerrors) + 1;
             goto cleanup;
          }
 
-         if (!(ds_array_ins_tail (*dst, current))) {
+         if (!(ds_array_ins_tail (dst, current))) {
             KBERROR ("OOM appending new node %s to collection\n", line);
-            wcount++;
+            *nerrors = (*nerrors) + 1;
             goto cleanup;
          }
+         nnodes++;
 
          // Nothing more to do ...
          continue;
@@ -342,14 +485,24 @@ size_t kbnode_read_file (ds_array_t **dst, const char *fname)
          if (!(parse_nv (&name, &value, line, "+="))) {
             KBPARSE_ERROR (fname, lc, "Failed to read name/value pair near '%s'\n",
                   line);
-            wcount++;
+            *nerrors = (*nerrors) + 1;
+            current = NULL;
+            goto cleanup;
+         }
+
+         if (!current) {
+            KBPARSE_ERROR (fname, lc,
+                  "`+=` found before any node is defined with [<node>]\n");
+            *nerrors = (*nerrors) + 1;
+            current = NULL;
             goto cleanup;
          }
 
          if (!(kbsymtab_append (fname, lc, false, current->symtab, name, value))) {
             KBPARSE_ERROR (fname, lc, "Failed to append value to '%s': \n",
                   name);
-            wcount++;
+            *nerrors = (*nerrors) + 1;
+            current = NULL;
             goto cleanup;
          }
 
@@ -364,14 +517,25 @@ size_t kbnode_read_file (ds_array_t **dst, const char *fname)
          if (!(parse_nv (&name, &value, line, "="))) {
             KBPARSE_ERROR (fname, lc, "Failed to read name/value pair near '%s'\n",
                   line);
-            wcount++;
+            *nerrors = (*nerrors) + 1;
+            current = NULL;
             goto cleanup;
          }
+
+         if (!current) {
+            KBPARSE_ERROR (fname, lc,
+                  "`+=` found before any node is defined with [<node>]\n");
+            *nerrors = (*nerrors) + 1;
+            current = NULL;
+            goto cleanup;
+         }
+
          if (!(kbsymtab_set (fname, lc, false, current->symtab, name, value))) {
-            KBPARSE_ERROR (fname, lc, "Error setting value for '%s': %s\n",
+            KBPARSE_ERROR (fname, lc, "Error setting value for '%s' to '%s'\n",
                   name, value);
             errno = ENOTSUP;
-            wcount++;
+            *nerrors = (*nerrors) + 1;
+            current = NULL;
             goto cleanup;
          }
 
@@ -381,8 +545,8 @@ size_t kbnode_read_file (ds_array_t **dst, const char *fname)
 
       // If we get here, it means that the line was not matched to any
       // pattern we support
-      KBPARSE_ERROR (fname, lc, "Unrecognised pattern in input '%s'\n", line);
-      wcount++;
+      KBPARSE_WARN (fname, lc, "Unrecognised pattern in input '%s'\n", line);
+      *nwarnings = (*nwarnings) + 1;
    }
 
 cleanup:
@@ -394,68 +558,158 @@ cleanup:
       fclose (inf);
    }
 
-   if (wcount) {
-      size_t nelements = ds_array_length (*dst);
-      for (size_t i=0; i<nelements; i++) {
-         kbnode_del (ds_array_get (*dst, i));
-      }
-      ds_array_del (*dst);
-      *dst = NULL;
+   if (!nnodes) {
+      KBPARSE_WARN (fname, lc, "No nodes found in file\n");
+      *nwarnings = (*nwarnings) + 1;
    }
 
-   return wcount;
+   if (*nerrors) {
+      kbnode_del (current);
+   }
+
+   if (*nerrors || *nwarnings) {
+      return false;
+   }
+   return true;
 }
 
-enum filter_type_t {
-   filter_type_NONE = 0,
-   filter_type_TYPE,
-   filter_type_NAME,
-   // filter_type_VALUE, RFU
-};
-
-struct filter_spec_t {
-   enum filter_type_t type;
-   const char *sterm;
-};
-
-static bool node_filter_func (const void *element, void *param)
+static bool node_filter_func_types (const void *element, void *param)
 {
    const kbnode_t *node = element;
-   const struct filter_spec_t *spec = param;
-   enum node_type_t type = node_type_UNKNOWN;
+   const char **types = param;
 
-   switch (spec->type) {
-      case filter_type_TYPE:
-         type = node_type_type (spec->sterm);
-         return (node->type == type) ? true : false;
-
-      case filter_type_NAME:
-         return (kbsymtab_exists (node->symtab, spec->sterm)) ? true : false;
-
-      case filter_type_NONE:
-      default:
-         break;
+   for (size_t i=0; types && types[i]; i++) {
+      enum node_type_t type = node_type_type (types[i]);
+      if (node->type == type) {
+         return true;
+      }
    }
    return false;
 }
 
-
-ds_array_t *kbnode_filter_type (ds_array_t *nodes, const char *type)
+static bool node_filter_names (const void *element, void *param)
 {
-   struct filter_spec_t filter_spec = {
-      filter_type_TYPE, type
-   };
+   const kbnode_t *node = element;
+   const char **names = param;
 
-   return ds_array_filter (nodes, node_filter_func, &filter_spec);
+   for (size_t i=0; names && names[i]; i++) {
+      if (kbsymtab_exists (node->symtab, names[i])) {
+         return true;
+      }
+   }
+   return false;
 }
 
-ds_array_t *kbnode_filter_varname (ds_array_t *nodes, const char *varname)
+static char **collect_args (const char *a1, va_list ap)
 {
-   struct filter_spec_t filter_spec = {
-      filter_type_NAME, varname
-   };
+   char *tmp = (char *)a1;
+   char **ret = NULL;
+   va_list ap2;
+   va_copy (ap2, ap);
 
-   return ds_array_filter (nodes, node_filter_func, &filter_spec);
+   size_t nelements = 0;
+   do {
+      nelements++;
+   } while ((tmp = va_arg (ap, char *)));
+
+   if (!(ret = calloc (nelements + 1, sizeof *ret))) {
+      KBERROR ("OOM error allocating array of %zu entries\n", nelements + 1);
+      va_end (ap2);
+      return NULL;
+   }
+
+   tmp = (char *)a1;
+   size_t i = 0;
+   do {
+      ret[i++] = tmp;
+   } while ((tmp = va_arg (ap2, char *)));
+
+   va_end (ap2);
+
+   return ret;
 }
 
+void kbnode_check (kbnode_t *node, size_t *errors, size_t *warnings)
+{
+   static const char *required[] = {
+      BUILTIN_ID, BUILTIN_MESSAGE,
+   };
+
+   if (!node) {
+      KBERROR ("NULL kbnode_t object found!\n");
+      INCPTR(*errors);
+      return;
+   }
+
+   const char *fname = kbsymtab_get_string (node->symtab, BUILTIN_FNAME);
+   int64_t line = kbsymtab_get_int (node->symtab, BUILTIN_LINE);
+
+   if (!fname || line == LLONG_MAX) {
+      KBERROR ("No filename/line information for node [%s:%" PRIi64 "]\n",
+            fname, line);
+      INCPTR(*warnings);
+   }
+
+   for (size_t i=0; i<sizeof required/sizeof required[0]; i++) {
+      if (!(kbsymtab_exists (node->symtab, required[i]))) {
+         KBPARSE_WARN (fname, line, "Missing required key '%s'\n", required[i]);
+         INCPTR(*errors);
+      }
+   }
+
+   // Possibly refactor this into a different function. For now this is fine
+   // as we only have a single set of XOR keys to check
+   int exec = kbsymtab_exists (node->symtab, BUILTIN_EXEC) ? 1 : 0;
+   int emit = kbsymtab_exists (node->symtab, BUILTIN_EMIT) ? 1 : 0;
+   int jobs = kbsymtab_exists (node->symtab, BUILTIN_JOBS) ? 1 : 0;
+   if ((exec + emit + jobs) != 1) {
+      KBPARSE_ERROR (fname, line,
+               "Exactly one of EXEC, EMIT or JOBS must be specified\n");
+      INCPTR(*errors);
+   }
+}
+
+ds_array_t *kbnode_filter_types (ds_array_t *nodes, const char *type, ...)
+{
+   va_list ap;
+   va_start (ap, type);
+   char **types = collect_args (type, ap);
+   ds_array_t *ret = ds_array_filter (nodes, node_filter_func_types, types);
+   free (types);
+   return ret;
+}
+
+ds_array_t *kbnode_filter_varname (ds_array_t *nodes, const char *varname, ...)
+{
+   va_list ap;
+   va_start (ap, varname);
+   char **names = collect_args (varname, ap);
+   ds_array_t *ret = ds_array_filter (nodes, node_filter_names, names);
+   free (names);
+   return ret;
+}
+
+
+kbnode_t *kbnode_instantiate (const kbnode_t *src, ds_array_t *all,
+                              size_t *errors, size_t *warnings)
+{
+   if (!src) {
+      KBERROR ("NULL node found\n");
+      INCPTR(*errors);
+      return NULL;
+   }
+
+   kbnode_t *ret = node_instantiate (src, NULL, all, errors, warnings);
+   if (!ret) {
+      KBPARSE_ERROR (node_filename (src), node_line (src),
+            "Failed to instantiate node\n");
+      return NULL;
+   }
+
+   // 1. Get a list of all the keys
+   // 2. Perform a substitution of each key with the value
+
+
+   return ret;
+}
 

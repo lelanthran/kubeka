@@ -11,115 +11,154 @@ as testing, deployments, etc.
 >
 
 ## MECHANISM
-The input files are parsed into an execution tree and the tree is linted
-to detect as many errors as possible. A linting failure prevents the
-daemon from proceeding.
+The input file is a *Simple List* of `nodes`. A `node` **must be** one of
+[the predefined types](#nt). A node contains a [collection of
+variables](#nv) which are set in the input file.
 
-The input file is a simple list of `nodes`. A `node` must be one of many
-predefined types. A node contains a collection of variables which are
-set in the input file. A node is invoked by either another node or by a
-`signal` (not to be confused with POSIX signals).
+The input files are parsed into an *Execution Tree* and the tree [is
+linted](#sc)
+to detect as many errors as possible before it is evaluated. A linting
+failure prevents the evaluation from taking place.
 
-Once invoked, a node can either:
+A node is invoked by either another node or by a `signal` (not to be
+confused with POSIX signals).
+
+Once invoked, a node **must perform** one, and **only one** of the following
+actions::
+
 1. Execute a command
 2. Emit a signal
 3. Invoke an ordered list of other nodes
 
-On tree creation, some sanity checks are applied:
-- All substitutions must resolve (no circular resolutions).
+### Sanity Checks {#sc}
+On tree creation, prior to evaluation, some sanity checks are applied:
+
+- All substitutions must resolve (no circular resolutions)
 - IDs cannot be duplicated
-- No invocation (via JOBS or JOBS[] or EMIT) can be mutually
+- No invocation (via `JOBS` or `JOBS[]` or `EMIT`) can be mutually
   recursive
-- All nodes MUST HAVE the following symbols defined:
-      ID
-      MESSAGE
-      EXEC xor JOBS xor EMIT
+- **All nodes** have a set of [**mandatory variables**](#mv)
+    that must be defined
 
 ## INPUT FILE FORMAT
-Simple, using the following pattern:
+A simple one, using the following pattern:
 ```
-[<node-type>]
-key = value
-...
+    [<node-type>]
+    variable = value
+    ...
 ```
-Some keys are required (`ID`, `MESSAGE`), while others are read-only
-(`_WORKING_PATH`). The user can create and use keynames as variables.
+Some variables are required (`ID`, `MESSAGE`), while others are read-only
+(`_WORKING_PATH`).
 
 
-## NODE TYPES:
+## NODE TYPES {#nt}
 1. Job nodes: an atomic unit of execution, with the type `job`. Cannot
     be used as a starting node in any workflow.
 2. Entry-point nodes: a node that serves as the start of a workflow.
-   Currently only nodes of type `cron` allow starting a workflow. Future
-   entrypoint nodes include webhooks for popular git SaaS providers.
+   Currently only nodes of type `periodic` allow starting a workflow. Future
+   planned entrypoint nodes include webhooks for popular git SaaS providers.
 3. A node must EITHER execute a shell command OR invoke another node OR
    emit a signal. If a node is to do nothing, use `EXEC = /bin/true`.
 
-## NODE VARIABLES
+## NODE VARIABLES{#nv}
 Each node can have unlimited variables attached to it. Variables are
 dynamically scoped and are resolved up the call-tree. IOW, if a variable
 is referred to within a node, and that node hasn't an entry in the symbol
-table for ath variable, then the ancestors are searched for that variable
+table for that variable, then the ancestors are searched for that variable
 until one is found.
 
-1. Variables with a leading underscore cannot be set (constants)
-2. Variables all uppercase can be read/written, but are used by the CD
-   engine itself (for example, setting JOBS to tell the CD engine what
-   jobs to run).
-3. All other non-numbered variable patterns are up for grabs by the
-   user (numbered variables RFU re parameters)
-4. `$(symbol)` is parsed as a variable substitution
-5. `$(symbol text ...)` is parsed as a builtin command,
-   the results of which are substituted. See "BUILTIN COMMANDS"
-   in the docs.
-6. All variables are arrays:
-    `$(var)`       shorthand for `$(var[0])`
-    `var = name`   shorthand for `var[0] = name`
-    `$(var[#])`    The number of elements in the array
-    `$(var[*])`    A single string containing all the elements,
-                   separated by a single space character
-    `$(var[@])`    A single string containing all the elements,
-                   in array syntax, i.e. [ el-1, el-2, .... el-n ]
-7. The uppercase variables are as follows:
-    ID                Sets a **unique** name for the node.
-    _WORKING_PATH     Constant containing the execution directory
-    EMIT              The signal to generate on successful completion
-    HANDLER           Specifies a signal to start on
-    MESSAGE           A message that the node will log when invoked
-    EXEC              A command that will be executed when node is invoked
-    ROLLBACK          A command that will be executed on node failure
-    JOBS              An ordered array of jobs to execute
-    LOG               A comma-separated list of keywords which specify
-                      what to log (default 'exec, exit-error, info`)
-                      exec:
-                         Log all exec output (stdout + stderr)
-                      exit-error:
-                         Log the exit code of EXEC or JOBS when
-                         the exit code is non-zero
-                      exit-success:
-                         Log the exit code of EXEC or JOBS when
-                         the exit code is zero
-                      entry:
-                         A message when invocation enters a node
-                      exit:
-                         A message when invocation leaves a node
-                      info:
-                         The name and message of the node during invocation
+Variables are set using `variable = some value`, on a single line. Variables
+are substituted using `$(variable)`.
+
+ 1. Variables with a leading underscore cannot be set (constants)
+ 2. Variables [in all uppercase](#tuv) can be read/written, but are used by
+    the CD engine itself (for example, setting JOBS to tell the CD engine
+    what jobs to run).
+ 3. All other non-numbered variable patterns are up for grabs by the user
+ [^1].
+ 4. All `$(symbol)` is parsed as a variable substitution
+ 5. All `$(symbol text ...)` is parsed as a builtin command, the results of
+    which are substituted. See "BUILTIN COMMANDS" in the docs.
+ 6. [All variables are arrays](#avaa).
+
+### The uppercase variables {#tuv}
+ All uppercase variables are used by the CD engine. Excepting the variables
+ with a leading underscore, they can all be read and written by the user.
+
+ The uppercase variables are as follows:
+
+| Variable | Used as  |
+| ------------ | ---------------|
+| `ID`            |  Sets a **unique** name for the node.
+| `_WORKING_PATH` |  Constant containing the execution directory
+| `EMIT`          |  The signal to generate on successful completion
+| `HANDLES`       |  Specifies a signal to start on
+| `MESSAGE`       |  The message that will be logged when node is invoked
+| `EXEC`          |  A command that will be executed when node is invoked
+| `ROLLBACK`      |  A command that will be executed on node failure
+| `JOBS`          |  An ordered array of jobs to execute
+| `LOG`           |  A comma-separated list of [logging keywords](#lk)
+
+### Mandatory variables {#mv}
+For **all nodes** the following variables **must** be defined:
+
+  - `ID`
+  - `MESSAGE`
+  - **Only one** of the following: `EXEC` or  `JOBS` or `EMIT`
+
+### All variables are arrays {#avaa}
+All variables are arrays. No variable is scalar (non-array). Setting a
+value to a variable without any index sets the first element of that
+array. Using a variable without specifying an index substitutes the first
+element of that array.
+
+Array indices **must be integer literals only**. You cannot, at this time,
+use a variable as an index into an array[^2].
+
+| Variable Usage | Explanation |
+| ------------  | ---------------|
+| `$(var)`      |  Shorthand for `$(var[0])`
+| `var = name`  |  Shorthand for `var[0] = name`
+| `$(var[#])`   |  The number of elements in the array
+| `$(var[\*])`  |  A single string containing all the
+|               |  elements separated by a single space
+|               |  character, for example `el-1 el-2 ...`
+| `$(var[@])`   |  A single string containing all the
+|               |  elements in array syntax, for
+|               |  example `[ el-1, el-2, .... el-n ]`
+
+## Logging keywords {#lk}
+The `LOG` variable specifies what to log. The user specifies a comma
+separated list of *logging keywords* (default 'exec, exit-error, info`):
+
+| Keyword | Logging behaviour |
+| ------- | ---------------- |
+| `exec`        | Log all exec output (stdout + stderr)
+| `exit-error`  | Log the exit code when the exit code is non-zero
+| `exit-success`| Log the exit code when the exit code is zero
+| `entry`       | A message when invocation enters a node
+| `exit`        | A message when invocation leaves a node
+| `info`        | The identifier and message of the node during invocation
 
 
+## EXAMPLE
+Following is an example kubeka file, for a hypothetical deployment of a
+piece of software that has some `ROLLBACK` requirement.
+
+```
 --- deployment-name.kubeka ---
 
 # Mechanism:
 # All the *.kubeka files are parsed into memory as a flat collection of
 # nodes. An index is written to /etc/kubeka/index.
 #
-# Nodes are then invoked at periodic intervals (`cron` nodes only) or on
+# Nodes are then invoked at periodic intervals (`periodic` nodes only) or on
 # receipt of a (`job` nodes only) SIGNAL (not to be confused with POSIX
 #
 # *** (PLANNED: github/gitlab/gitea webhook nodes) ***
 #
 # Each node has *at least* the following fields:
-#     type        The type of node (cron, job, etc)
+#     type        The type of node (periodic, job, etc)
 #     symtab      A symbol table[1]
 #     parent      A pointer to a parent node (invocation only, for symbol
 #                 resolution)
@@ -146,8 +185,7 @@ until one is found.
 #  array of strings.
 #
 
-```
-[cron]
+[periodic]
 ID = git checker
 INTERVAL = 5m     # This will run every five minutes
 JOBS[] = [ Check changes ]
@@ -245,3 +283,14 @@ MESSAGE = Setting finished variables
 HASH = $(exec git log -1 | head -n 1 | cut -f 1 -d \  )
 
 ```
+
+
+## Footnotes
+[^1]: Numbered variables are reserved for future use (*RFU*), with respect
+  to adding support for parameters to nodes.
+[^2]: At time of writing there is no support for iteration on an array. As
+such, there is no good reason to allow using variables as indices, while
+there is a *very* good reason to disallow this, *viz* bounds-checking
+failure will be possible at runtime. With literals all bounds-checking can
+be performed prior to evaluation.
+

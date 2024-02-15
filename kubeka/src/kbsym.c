@@ -3,6 +3,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <ctype.h>
+#include <limits.h>
+#include <inttypes.h>
 
 #include "ds_str.h"
 #include "ds_hmap.h"
@@ -124,7 +126,7 @@ void kbsymtab_dump (const kbsymtab_t *s, FILE *outf)
 
    for (size_t i=0; i<nkeys && keys && keys[i]; i++) {
       char **value = NULL;
-      if (!(ds_hmap_get_str_ptr(s->table, keys[i], (void **)&value, NULL))) {
+      if (!(ds_hmap_get_str_ptr (s->table, keys[i], (void **)&value, NULL))) {
          KBWARN ("Failed to retrieve value for key [%s]\n", keys[i]);
       }
       free (tmp);
@@ -172,19 +174,63 @@ void kbsymtab_del (kbsymtab_t *st)
    free (st);
 }
 
-/*
-static char **symtab_get (kbsymtab_t *st, const char *key)
+kbsymtab_t *kbsymtab_copy (kbsymtab_t *st)
+{
+   bool error = true;
+   kbsymtab_t *ret = NULL;
+   char **keys = NULL;
+
+   if (!(ret = kbsymtab_new ())) {
+      KBERROR ("OOM attempting to create new symbol table\n");
+      goto cleanup;
+   }
+
+   if (!(ds_hmap_keys (st->table, (void ***)&keys, NULL))) {
+      KBERROR ("OOM allocating keys\n");
+      goto cleanup;
+   }
+
+   for (size_t i=0; keys && keys[i]; i++) {
+      char **srcvals = NULL;
+      if (!(ds_hmap_get_str_ptr (st->table, keys[i], (void **)&srcvals, NULL))) {
+         KBERROR ("OOM getting source values\n");
+         goto cleanup;
+      }
+      char **dstvals = NULL;
+      if (!(dstvals = kbutil_strarray_copy (srcvals))) {
+         KBERROR ("OOM creating dst values\n");
+         goto cleanup;
+      }
+      if (!(ds_hmap_set_str_ptr (ret->table, keys[i], dstvals, 0))) {
+         KBERROR ("OOM storing dst values\n");
+         goto cleanup;
+      }
+   }
+
+   error = false;
+
+cleanup:
+   free (keys);
+   if (error) {
+      kbsymtab_del (ret);
+      ret = NULL;
+   }
+   return ret;
+
+}
+
+const char **kbsymtab_get (const kbsymtab_t *st, const char *key)
 {
    if (!st)
       return NULL;
 
-   char **ret = NULL;
+   const char **ret = NULL;
    if (!(ds_hmap_get_str_ptr (st->table, key, (void **)&ret, NULL))) {
-      KBWARN ("Failed to find symbol [%s]\n", key);
+      // KBWARN ("Failed to find symbol [%s]\n", key);
    }
+
    return ret;
 }
-*/
 
 enum keytype_t {
    keytype_ERROR = 0,
@@ -465,5 +511,25 @@ bool kbsymtab_exists (kbsymtab_t *st, const char *key)
    }
    free (keys);
    return false;
+}
+
+const char *kbsymtab_get_string (const kbsymtab_t *st, const char *key)
+{
+   const char **vals = kbsymtab_get (st, key);
+   if (!vals || !vals[0]) {
+      return "";
+   }
+   return vals[0];
+}
+
+int64_t kbsymtab_get_int (const kbsymtab_t *st, const char *key)
+{
+   int64_t ret = LLONG_MAX;
+   const char **vals = kbsymtab_get (st, key);
+   if (!vals || !vals[0]) {
+      return ret;
+   }
+   sscanf (vals[0], "%" PRIi64, &ret);
+   return ret;
 }
 

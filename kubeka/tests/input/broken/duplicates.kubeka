@@ -1,0 +1,10 @@
+[job]
+ID = duplicates-1
+MESSAGE = A duplicate node 1/2
+EXEC = echo Hello World (Node 1)
+
+[job]
+ID = duplicates-1
+MESSAGE = A duplicate node 2/2
+EXEC = echo Hello World (Node 2)
+
