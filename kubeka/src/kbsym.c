@@ -28,7 +28,7 @@ static bool match_any (int value, int sentinel, int match, ...)
 }
 #endif
 
-static char **parse_value (char *value)
+static char **_parse_value (char *value)
 {
    char **ret = NULL;
    if (value[0] != '[') {
@@ -78,6 +78,23 @@ static char **parse_value (char *value)
    }
    return ret;
 }
+
+static char **parse_value (const char *value)
+{
+   char *copy = ds_str_dup (value);
+   if (!copy) {
+      KBERROR ("OOM copying [%s]\n", value);
+      return NULL;
+   }
+
+   char **ret = _parse_value (copy);
+
+   free (copy);
+   return ret;
+}
+
+
+
 
 /* ***********************************************************
  * Symbol table datastructure
@@ -255,7 +272,7 @@ static enum keyclass_t detect_keyclass (const char *key)
 
 
 bool kbsymtab_set (const char *fname, size_t lc, bool force,
-                   kbsymtab_t *st, const char *key, char *value)
+                   kbsymtab_t *st, const char *key, const char *value)
 {
    bool error = true;
    char **varray = NULL;
@@ -281,7 +298,7 @@ bool kbsymtab_set (const char *fname, size_t lc, bool force,
    // Determine what type of key this is
    enum keytype_t keytype = detect_keytype (keycopy, &index);
    if (keytype == keytype_ERROR) {
-      KBPARSE_ERROR (fname, lc, "Unrecognised key syntax: `%s`\n", value);
+      KBPARSE_ERROR (fname, lc, "Unrecognised key syntax: `%s`\n", keycopy);
       goto cleanup;
    }
 

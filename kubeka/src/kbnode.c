@@ -218,8 +218,6 @@ void kbnode_flags_set (kbnode_t *node, uint64_t flags)
    node->flags = flags;
 }
 
-
-
 void kbnode_dump (const kbnode_t *node, FILE *outf)
 {
    if (!outf)

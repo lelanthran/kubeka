@@ -1,4 +1,4 @@
-Node [cron] with parent [(nil)]: 0
+Node [cron] with parent [(nil)]: 0x0
    appname: [ $(env_read APPNAME) ]
    test_array: [ four ,five ,six ,seven ]
    _FILENAME: [ ./tests/input/kbnode.txt ]
@@ -10,65 +10,65 @@ Node [cron] with parent [(nil)]: 0
    test_empty_string: [  nine ]
    _LINE: [ 6 ]
    git_origin: [ ssh://some-origin/some-repo.git ]
-Node [job] with parent [(nil)]: 0
+Node [job] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode.txt ]
    JOBS: [ build ,upgrade ,Done ]
    _LINE: [ 23 ]
    MESSAGE: [ Performing a full deployment ]
    ID: [ Full deployment ]
-Node [job] with parent [(nil)]: 0
+Node [job] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode.txt ]
    JOBS: [ Check changes ,checkout ,Build thing ,test ,package ]
    _LINE: [ 28 ]
    MESSAGE: [ Starting build process ]
    ID: [ build ]
-Node [job] with parent [(nil)]: 0
+Node [job] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode.txt ]
    JOBS: [ pre-deployment ,Upgrade DB ,Copy files ]
    _LINE: [ 33 ]
    MESSAGE: [ Performing upgrade ]
    ID: [ upgrade ]
-Node [job] with parent [(nil)]: 0
+Node [job] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode.txt ]
    _LINE: [ 38 ]
    EXEC: [  if [ `git  ls-remote $(git_origin) heads/master | cut -f 1 ` == $(current HASH)]; then exit -1; else exit 0; ]
    MESSAGE: [ Checking if sources changed, will continue only if sources changed ]
    ID: [ Check changes ]
-Node [job] with parent [(nil)]: 0
+Node [job] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode.txt ]
    ROLLBACK: [  ]
    _LINE: [ 46 ]
    EXEC: [ git clone $(git_origin) && git checkout $(git_branch) $(_WORKING_PATH) ]
    MESSAGE: [ A single long line message up to 8kb ]
    ID: [ checkout ]
-Node [job] with parent [(nil)]: 0
+Node [job] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode.txt ]
    ROLLBACK: [  ]
    _LINE: [ 52 ]
    EXEC: [ make $1 ]
    MESSAGE: [ Building $(_JOB) for $(_DEPLOYMENT) with parameter $1 ]
    ID: [ Build thing ]
-Node [job] with parent [(nil)]: 0
+Node [job] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode.txt ]
    ROLLBACK: [  ]
    _LINE: [ 58 ]
    EXEC: [ test.sh ]
    MESSAGE: [ Testing $(_DEPLOYMENT) ]
    ID: [ test ]
-Node [job] with parent [(nil)]: 0
+Node [job] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode.txt ]
    _LINE: [ 64 ]
    EXEC: [ tar -zcvf $(_TMPDIR)/$(env_read APPNAME).tar.gz $(build_artifacts) ]
    MESSAGE: [ Packaging $(_DEPLOYMENT) ]
    ID: [ package ]
-Node [job] with parent [(nil)]: 0
+Node [job] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode.txt ]
    WORKING_DIR: [ $(target_directory) ]
    _LINE: [ 69 ]
    EXEC: [ systemctl stop && tar -zxvf $(env_read APPNAME) ]
    MESSAGE: [ Deploying to $(target_directory) ]
    ID: [ pre-deployment ]
-Node [job] with parent [(nil)]: 0
+Node [job] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode.txt ]
    ROLLBACK: [ $(exec ./rollback.sh) ]
    WORKING_DIR: [ $(target_directory) ]
@@ -76,13 +76,13 @@ Node [job] with parent [(nil)]: 0
    EXEC: [ db/upgrade.sh ]
    MESSAGE: [ Upgrading database ]
    ID: [ Upgrade DB ]
-Node [job] with parent [(nil)]: 0
+Node [job] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode.txt ]
    _LINE: [ 82 ]
    EXEC: [ cp -Rv $(artifacts) $(target_directory) ]
    MESSAGE: [ Copying files to $(target_directory) ]
    ID: [ Copy files ]
-Node [job] with parent [(nil)]: 0
+Node [job] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode.txt ]
    HASH: [ $(exec git log -1 | head -n 1 | cut -f 1 -d \  ) ]
    _LINE: [ 87 ]

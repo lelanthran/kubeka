@@ -15,7 +15,7 @@ extern "C" {
    void kbsymtab_del (kbsymtab_t *st);
 
    bool kbsymtab_set (const char *fname, size_t lc, bool force,
-                      kbsymtab_t *st, const char *key, char *value);
+                      kbsymtab_t *st, const char *key, const char *value);
 
    bool kbsymtab_append (const char *fname, size_t lc, bool force,
                          kbsymtab_t *st, const char *key, char *value);

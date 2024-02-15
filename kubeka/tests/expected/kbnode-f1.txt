@@ -1,72 +1,72 @@
-Node [cron] with parent [(nil)]: 0
+Node [cron] with parent [(nil)]: 0x0
    appname: [ $(env_read APPNAME) ]
    _FILENAME: [ ./tests/input/kbnode-f1.txt ]
    git_branch: [ master ]
    _LINE: [ 1 ]
    git_origin: [ ssh://some-origin/some-repo.git ]
-Node [job] with parent [(nil)]: 0
+Node [job] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode-f1.txt ]
    for_filter: [ first node ]
    JOBS: [ build ,upgrade ,Done ]
    _LINE: [ 7 ]
    MESSAGE: [ Performing a full deployment ]
    ID: [ Full deployment ]
-Node [cron] with parent [(nil)]: 0
+Node [cron] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode-f1.txt ]
    for_filter: [ second node ]
    JOBS: [ Check changes ,checkout ,Build thing ,test ,package ]
    _LINE: [ 13 ]
    MESSAGE: [ Starting build process ]
    ID: [ build ]
-Node [job] with parent [(nil)]: 0
+Node [job] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode-f1.txt ]
    for_filter: [ third node ]
    JOBS: [ pre-deployment ,Upgrade DB ,Copy files ]
    _LINE: [ 19 ]
    MESSAGE: [ Performing upgrade ]
    ID: [ upgrade ]
-Node [cron] with parent [(nil)]: 0
+Node [cron] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode-f1.txt ]
    _LINE: [ 25 ]
    EXEC: [  if [ `git  ls-remote $(git_origin) heads/master | cut -f 1 ` == $(current HASH)]; then exit -1; else exit 0; ]
    MESSAGE: [ Checking if sources changed, will continue only if sources changed ]
    ID: [ Check changes ]
 f1 ====================================
-Node [cron] with parent [(nil)]: 0
+Node [cron] with parent [(nil)]: 0x0
    appname: [ $(env_read APPNAME) ]
    _FILENAME: [ ./tests/input/kbnode-f1.txt ]
    git_branch: [ master ]
    _LINE: [ 1 ]
    git_origin: [ ssh://some-origin/some-repo.git ]
-Node [cron] with parent [(nil)]: 0
+Node [cron] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode-f1.txt ]
    for_filter: [ second node ]
    JOBS: [ Check changes ,checkout ,Build thing ,test ,package ]
    _LINE: [ 13 ]
    MESSAGE: [ Starting build process ]
    ID: [ build ]
-Node [cron] with parent [(nil)]: 0
+Node [cron] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode-f1.txt ]
    _LINE: [ 25 ]
    EXEC: [  if [ `git  ls-remote $(git_origin) heads/master | cut -f 1 ` == $(current HASH)]; then exit -1; else exit 0; ]
    MESSAGE: [ Checking if sources changed, will continue only if sources changed ]
    ID: [ Check changes ]
 f2 ====================================
-Node [job] with parent [(nil)]: 0
+Node [job] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode-f1.txt ]
    for_filter: [ first node ]
    JOBS: [ build ,upgrade ,Done ]
    _LINE: [ 7 ]
    MESSAGE: [ Performing a full deployment ]
    ID: [ Full deployment ]
-Node [cron] with parent [(nil)]: 0
+Node [cron] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode-f1.txt ]
    for_filter: [ second node ]
    JOBS: [ Check changes ,checkout ,Build thing ,test ,package ]
    _LINE: [ 13 ]
    MESSAGE: [ Starting build process ]
    ID: [ build ]
-Node [job] with parent [(nil)]: 0
+Node [job] with parent [(nil)]: 0x0
    _FILENAME: [ ./tests/input/kbnode-f1.txt ]
    for_filter: [ third node ]
    JOBS: [ pre-deployment ,Upgrade DB ,Copy files ]
