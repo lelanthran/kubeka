@@ -29,14 +29,6 @@
 #include "kbsym.h"
 #include "kbutil.h"
 
-#define BUILTIN_FNAME      "_FILENAME"
-#define BUILTIN_LINE       "_LINE"
-#define BUILTIN_ID         "ID"
-#define BUILTIN_MESSAGE    "MESSAGE"
-#define BUILTIN_JOBS       "JOBS"
-#define BUILTIN_EXEC       "EXEC"
-#define BUILTIN_EMIT       "EMIT"
-
 #define INCPTR(x)    do {\
    (x) = (x) + 1;\
 } while (0)
@@ -116,7 +108,7 @@ static const kbnode_t *node_findbyid (ds_array_t *all, const char *id)
    size_t n = ds_array_length (all);
    for (size_t i=0; i< n; i++) {
       const kbnode_t *node = ds_array_get (all, i);
-      const char *node_id = kbsymtab_get_string (node->symtab, BUILTIN_ID);
+      const char *node_id = kbsymtab_get_string (node->symtab, KBNODE_KEY_ID);
       if ((strcmp (node_id, id)) == 0) {
          return node;
       }
@@ -130,9 +122,9 @@ static const kbnode_t *node_findparent (const kbnode_t *node, const char *id)
       return NULL;
 
    fprintf (stderr, "Checking [%s] for [%s]\n",
-            kbsymtab_get_string (node->symtab, BUILTIN_ID),
+            kbsymtab_get_string (node->symtab, KBNODE_KEY_ID),
             id);
-   if ((strcmp (kbsymtab_get_string (node->symtab, BUILTIN_ID), id)) == 0) {
+   if ((strcmp (kbsymtab_get_string (node->symtab, KBNODE_KEY_ID), id)) == 0) {
       return node;
    }
 
@@ -190,8 +182,8 @@ static kbnode_t *node_new (const char *fname, size_t line,
       goto cleanup;
    }
 
-   if (!(kbsymtab_set (fname, line, true, ret->symtab, BUILTIN_FNAME, fname)) ||
-         !((kbsymtab_set (fname, line, true, ret->symtab,BUILTIN_LINE, sline)))) {
+   if (!(kbsymtab_set (fname, line, true, ret->symtab, KBNODE_KEY_FNAME, fname)) ||
+         !((kbsymtab_set (fname, line, true, ret->symtab,KBNODE_KEY_LINE, sline)))) {
       KBPARSE_ERROR (fname, line, "Failed to set default vars\n");
       goto cleanup;
    }
@@ -218,12 +210,12 @@ cleanup:
 
 static const char *node_filename (const kbnode_t *node)
 {
-   return kbsymtab_get_string (node->symtab, BUILTIN_FNAME);
+   return kbsymtab_get_string (node->symtab, KBNODE_KEY_FNAME);
 }
 
 static int64_t node_line (const kbnode_t *node)
 {
-   return kbsymtab_get_int (node->symtab, BUILTIN_LINE);
+   return kbsymtab_get_int (node->symtab, KBNODE_KEY_LINE);
 }
 
 static kbnode_t *node_instantiate (const kbnode_t *src, kbnode_t *parent,
@@ -234,7 +226,8 @@ static kbnode_t *node_instantiate (const kbnode_t *src, kbnode_t *parent,
    const char **jobs = NULL;
    const kbnode_t *ref = NULL;
 
-   fprintf (stderr, "Instantiating [%s]\n", kbsymtab_get_string(src->symtab, BUILTIN_ID));
+   fprintf (stderr, "Instantiating [%s]\n",
+         kbsymtab_get_string(src->symtab, KBNODE_KEY_ID));
    // 1. Create a new node (fname and line don't matter here, it will be set
    // below anyway during the cloning of the symbol table)
    kbnode_t *ret = node_new ("", 0, node_type_name (src->type), parent);
@@ -248,7 +241,7 @@ static kbnode_t *node_instantiate (const kbnode_t *src, kbnode_t *parent,
    }
 
    // 3, Find all the children
-   if (!(jobs = kbsymtab_get (src->symtab, BUILTIN_JOBS))) {
+   if (!(jobs = kbsymtab_get (src->symtab, KBNODE_KEY_JOBS))) {
       // No JOBS[] to create children from, ignore
       error = false;
       goto cleanup;
@@ -269,8 +262,8 @@ static kbnode_t *node_instantiate (const kbnode_t *src, kbnode_t *parent,
       if (ancestor) {
          KBPARSE_ERROR (node_filename (src), node_line (src),
                "Reference-cycle found. Node [%s] recursively calls node [%s]\n",
-               kbsymtab_get_string (src->symtab, BUILTIN_ID),
-               kbsymtab_get_string (ancestor->symtab, BUILTIN_ID));
+               kbsymtab_get_string (src->symtab, KBNODE_KEY_ID),
+               kbsymtab_get_string (ancestor->symtab, KBNODE_KEY_ID));
          fprintf (stderr, "Node 1:\n");
          kbnode_dump (parent, stderr);
          fprintf (stderr, "Node 2:\n");
@@ -397,8 +390,8 @@ bool kbnode_get_srcdef (kbnode_t *node, const char **fname, size_t *line)
       return false;
    }
 
-   const char **f = kbsymtab_get (node->symtab, BUILTIN_FNAME);
-   const char **l = kbsymtab_get (node->symtab, BUILTIN_LINE);
+   const char **f = kbsymtab_get (node->symtab, KBNODE_KEY_FNAME);
+   const char **l = kbsymtab_get (node->symtab, KBNODE_KEY_LINE);
    if (!f || !f[0] || !l || !l[0]) {
       return false;
    }
@@ -406,6 +399,11 @@ bool kbnode_get_srcdef (kbnode_t *node, const char **fname, size_t *line)
    sscanf (l[0], "%zu", line);
    *fname = f[0];
    return true;
+}
+
+const char *kbnode_get (kbnode_t *node, const char *key)
+{
+   return node == NULL ? "" : kbsymtab_get_string (node->symtab, key);
 }
 
 
@@ -664,7 +662,7 @@ static char **collect_args (const char *a1, va_list ap)
 void kbnode_check (kbnode_t *node, size_t *errors, size_t *warnings)
 {
    static const char *required[] = {
-      BUILTIN_ID, BUILTIN_MESSAGE,
+      KBNODE_KEY_ID, KBNODE_KEY_MESSAGE,
    };
 
    if (!node) {
@@ -673,8 +671,8 @@ void kbnode_check (kbnode_t *node, size_t *errors, size_t *warnings)
       return;
    }
 
-   const char *fname = kbsymtab_get_string (node->symtab, BUILTIN_FNAME);
-   int64_t line = kbsymtab_get_int (node->symtab, BUILTIN_LINE);
+   const char *fname = kbsymtab_get_string (node->symtab, KBNODE_KEY_FNAME);
+   int64_t line = kbsymtab_get_int (node->symtab, KBNODE_KEY_LINE);
 
    if (!fname || line == LLONG_MAX) {
       KBERROR ("No filename/line information for node [%s:%" PRIi64 "]\n",
@@ -692,9 +690,9 @@ void kbnode_check (kbnode_t *node, size_t *errors, size_t *warnings)
 
    // Possibly refactor this into a different function. For now this is fine
    // as we only have a single set of XOR keys to check
-   int exec = kbsymtab_exists (node->symtab, BUILTIN_EXEC) ? 1 : 0;
-   int emit = kbsymtab_exists (node->symtab, BUILTIN_EMIT) ? 1 : 0;
-   int jobs = kbsymtab_exists (node->symtab, BUILTIN_JOBS) ? 1 : 0;
+   int exec = kbsymtab_exists (node->symtab, KBNODE_KEY_EXEC) ? 1 : 0;
+   int emit = kbsymtab_exists (node->symtab, KBNODE_KEY_EMIT) ? 1 : 0;
+   int jobs = kbsymtab_exists (node->symtab, KBNODE_KEY_JOBS) ? 1 : 0;
    if ((exec + emit + jobs) != 1) {
       KBPARSE_ERROR (fname, line,
                "Exactly one of EXEC, EMIT or JOBS must be specified\n");

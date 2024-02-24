@@ -7,10 +7,10 @@
 #include "ds_set.h"
 
 
-#include "kbtree.h"
 #include "kbutil.h"
 #include "kbsym.h"
 #include "kbnode.h"
+#include "kbtree.h"
 
 static int cmpnode (const void *lhs, size_t lhslen,
                     const void *rhs, size_t rhslen)
@@ -113,6 +113,18 @@ cleanup:
    ds_set_iterate (set, array_push, ret);
    ds_set_del (set);
    return ret;
+}
+
+void kbtree_vsubst (kbnode_t *root, size_t *nerrors, size_t *nwarnings)
+{
+   // for each $key in the symtab {
+   //    for each $value in the array of values from $key {
+   //       for each $varef:key in the $value {
+   //          $value = symlookup ($varef:key)
+   //          substitute ($varef:position, $value)
+   //       }
+   //    }
+   // }
 }
 
 

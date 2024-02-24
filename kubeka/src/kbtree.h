@@ -11,6 +11,10 @@ extern "C" {
    ds_array_t *kbtree_coalesce (ds_array_t *nodes, size_t *nduplicates,
                                 size_t *nerrors, size_t *nwarnings);
 
+   // Using the given node as the root of an instantiated tree, perform
+   // all the variable substitutions.
+   void kbtree_vsubst (kbnode_t *root, size_t *nerrors, size_t *nwarnings);
+
 
 
 #ifdef __cplusplus

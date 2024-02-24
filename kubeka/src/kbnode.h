@@ -18,6 +18,14 @@ typedef struct kbnode_t kbnode_t;
 #define KBNODE_TYPE_JOB          "job"
 #define KBNODE_TYPE_ENTRYPOINT   "entrypoint"
 
+#define KBNODE_KEY_FNAME      "_FILENAME"
+#define KBNODE_KEY_LINE       "_LINE"
+#define KBNODE_KEY_ID         "ID"
+#define KBNODE_KEY_MESSAGE    "MESSAGE"
+#define KBNODE_KEY_JOBS       "JOBS"
+#define KBNODE_KEY_EXEC       "EXEC"
+#define KBNODE_KEY_EMIT       "EMIT"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -29,6 +37,8 @@ extern "C" {
    void kbnode_dump (const kbnode_t *node, FILE *outf);
    void kbnode_del (kbnode_t *node);
    bool kbnode_get_srcdef (kbnode_t *node, const char **fname, size_t *line);
+
+   const char *kbnode_get (kbnode_t *node, const char *key);
 
    // Returns number of errors encountered. Caller must ensure that
    // *dst is initialised with ds_array_new();

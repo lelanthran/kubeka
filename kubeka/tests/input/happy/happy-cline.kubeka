@@ -1,0 +1,10 @@
+[job]
+ID = Setup
+MESSAGE = Setting up to run the job
+EXEC = echo "In directory: $(PWD)"
+
+[entrypoint]
+ID = runjob
+MESSAGE = Running the job
+JOBS[] = [ Setup ]
+

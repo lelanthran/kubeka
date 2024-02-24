@@ -119,9 +119,9 @@ static void print_help_msg (void)
 "DESCRIPTION",
 "  Kubeka (meaning 'put') is a simple tool to automate continuous deployment. On",
 "  startup all *.kubeka configuration files are loaded and then linted for errors.",
-"  Thereafter kubeka will wait for one of multiple events (as specified in the ",
-"  configuration files) and proceed to execute all dependent jobs as specified in",
-"  the configuration files.",
+"  Thereafter kubeka will wait for one of multiple events (specified in the ",
+"  configuration files) and proceed to execute all dependent jobs, depending on",
+"  the trigger for starting a job, as specified in the the configuration files.",
 "",
 "  The configuration files are described in the official Kubeka help documents. See",
 "  https://github.com/lelanthran/kubeka",
@@ -138,6 +138,9 @@ static void print_help_msg (void)
 "  -f | --file=<filename>",
 "              An additional *.kubeka file. This option can be specified multiple",
 "              times, once for each additional file that must be parsed.",
+"  -j | --job=<job-id>",
+"              The single job to execute. This is to allow execution of jobs from",
+"              the command-line. The job has to be of type `entrypoint`.",
 "  -W | --Werror",
 "              Treat all warnings as errors.",
 "",
@@ -220,6 +223,8 @@ int main (int argc, char **argv)
    /* ***********************************************************************
     * 1. Read all options
     * ***********************************************************************/
+
+
    // 1.1 Help?
    if ((opt_bool (argc, argv, "help", 'h'))) {
       print_help_msg ();
@@ -273,8 +278,20 @@ int main (int argc, char **argv)
       counter++;
    }
 
-   // 1.4 Check if we are to daemonize
+   // 1.4 Check if running in single-shot mode.
+   const char *opt_entry = opt_short (argc, argv, 'j');
+   if (!opt_entry) {
+      opt_entry = opt_long (argc, argv, "job");
+   }
+
+   // 1.5 Check if we are to daemonize
    if ((opt_bool (argc, argv, "daemon", 'd'))) {
+      // Sanity check - user cannot specify both jobs and daemonize
+      if (opt_entry) {
+         ERROR ("Cannot specify both a job to run and --daemonize\n");
+         goto cleanup;
+      }
+
       pid_t pid = fork ();
       if (pid < 0) {
          ERROR ("Failed to create child process: %m\n");
@@ -288,7 +305,7 @@ int main (int argc, char **argv)
       printf ("Daemon %s started with pid %i\n", argv[0], pid);
    }
 
-   // 1.4 Set the remaining options
+   // 1.6 Set the remaining options
    bool opt_werror = opt_bool (argc, argv, "Werror", 'W');
 
    // At this point we have completed all option processing, may as well check if any
@@ -306,6 +323,8 @@ int main (int argc, char **argv)
     *  well as user-specified dirs
     * ***********************************************************************/
 
+
+
    // 2.1. Generate a list of files to read and load
    if (!(files = process_paths (paths))) {
       ERROR ("Fatal error  processing  paths\n");
@@ -319,6 +338,9 @@ int main (int argc, char **argv)
    /* ***********************************************************************
     * 3. Create single giant list of nodes, duplicates included!
     * ***********************************************************************/
+
+
+
    if (!(nodes = ds_array_new ())) {
       ERROR ("Failed to create array to store nodes\n");
       goto cleanup;
@@ -349,6 +371,9 @@ int main (int argc, char **argv)
     * 4. Gather all nodes into a deduplicated collection, discarding (and
     *    warning about) duplicate nodes.
     * ***********************************************************************/
+
+
+
    size_t ndups = 0;
    warnings = 0;
    errors = 0;
@@ -373,6 +398,9 @@ int main (int argc, char **argv)
     *    1. Conflicting variables?
     *    2. Missing mandatory/required variables?
     * ***********************************************************************/
+
+
+
    size_t nnodes = ds_array_length (dedup_nodes);
    for (size_t i=0; i<nnodes; i++) {
       kbnode_t *node = ds_array_get (dedup_nodes, i);
@@ -385,6 +413,9 @@ int main (int argc, char **argv)
     * simply creates a runtime tree with each entrypoint as the root node, to
     * be evaluated at a later time.
     * ***********************************************************************/
+
+
+
    if (!(trees = ds_array_new ())) {
       ERROR ("OOM creating root node arrays\n");
       nerrors++;
@@ -408,19 +439,33 @@ int main (int argc, char **argv)
       }
    }
 
+   nnodes = ds_array_length (trees);
+   for (size_t i=0; i<nnodes; i++) {
+      kbnode_t *root = ds_array_get (trees, i);
+      size_t errors = 0,
+             warnings = 0;
 
+      kbtree_vsubst (root, &errors, &warnings);
+      ERROR ("Node [%s]: %zu errors, %zu warnings\n",
+               kbnode_get (root, KBNODE_KEY_ID), errors, warnings);
+      nerrors += errors;
+      nwarnings += warnings;
+   }
 
-   printf ("Found %zu errors and %zu warnings\n", nerrors, nwarnings);
-   printf ("Found %zu nodes\n", ds_array_length (nodes));
 
 
    /* ***********************************************************************
-    * X. Decide whether to continue or not. Errors unconditionally cause
+    * 7. Decide whether to continue or not. Errors unconditionally cause
     *    a jump to the exit. Warnings only cause a jump if the user specified
     *    -W/--Werror
     * ***********************************************************************/
-   // Finally, print out error count and warning count, and determine if we
-   // must abort execution.
+
+
+
+   printf ("Found %zu errors and %zu warnings\n", nerrors, nwarnings);
+   printf ("Found %zu nodes (%zu runnable)\n",
+            ds_array_length (nodes), ds_array_length (trees));
+
    if (nerrors) {
       fprintf (stderr, "Aborting due to %zu error%s\n",
             nerrors, nerrors == 1 ? "" : "s");
