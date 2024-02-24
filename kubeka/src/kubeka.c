@@ -448,6 +448,7 @@ cleanup:
 
    ds_array_del (dedup_nodes);
    ds_array_del (entrypoints);
+   ds_array_fptr (trees, (void (*) (void *))kbnode_del);
    ds_array_del (trees);
    return ret;
 }

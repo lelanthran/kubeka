@@ -1,0 +1,20 @@
+[job]
+ID = self-dependency-1
+MESSAGE = self-dependency-1
+JOBS = self-dependency-2
+
+[job]
+ID = self-dependency-2
+MESSAGE = self-dependency-2
+JOBS = self-dependency-2
+
+[job]
+ID =  self-dependency-3
+MESSAGE = reference
+JOBS[] = [ self-dependency-2 ]
+
+[entrypoint]
+ID =   self-dependency-manual
+MESSAGE = Starting node manually
+JOBS = self-dependency-3
+

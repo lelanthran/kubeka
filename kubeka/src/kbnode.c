@@ -124,6 +124,21 @@ static const kbnode_t *node_findbyid (ds_array_t *all, const char *id)
    return NULL;
 }
 
+static const kbnode_t *node_findparent (const kbnode_t *node, const char *id)
+{
+   if (!node)
+      return NULL;
+
+   fprintf (stderr, "Checking [%s] for [%s]\n",
+            kbsymtab_get_string (node->symtab, BUILTIN_ID),
+            id);
+   if ((strcmp (kbsymtab_get_string (node->symtab, BUILTIN_ID), id)) == 0) {
+      return node;
+   }
+
+   return node_findparent (node->parent, id);
+}
+
 static void node_del (kbnode_t **node)
 {
    if (!node || !*node)
@@ -219,6 +234,7 @@ static kbnode_t *node_instantiate (const kbnode_t *src, kbnode_t *parent,
    const char **jobs = NULL;
    const kbnode_t *ref = NULL;
 
+   fprintf (stderr, "Instantiating [%s]\n", kbsymtab_get_string(src->symtab, BUILTIN_ID));
    // 1. Create a new node (fname and line don't matter here, it will be set
    // below anyway during the cloning of the symbol table)
    kbnode_t *ret = node_new ("", 0, node_type_name (src->type), parent);
@@ -245,6 +261,22 @@ static kbnode_t *node_instantiate (const kbnode_t *src, kbnode_t *parent,
                "Failed to find reference to job [%s]\n", jobs[i]);
          INCPTR (*errors);
          continue;
+      }
+
+      // If the child node is also an ancestor, then we give up - nodes
+      // cannot reference each other recursively.
+      const kbnode_t *ancestor = node_findparent (parent, jobs[i]);
+      if (ancestor) {
+         KBPARSE_ERROR (node_filename (src), node_line (src),
+               "Reference-cycle found. Node [%s] recursively calls node [%s]\n",
+               kbsymtab_get_string (src->symtab, BUILTIN_ID),
+               kbsymtab_get_string (ancestor->symtab, BUILTIN_ID));
+         fprintf (stderr, "Node 1:\n");
+         kbnode_dump (parent, stderr);
+         fprintf (stderr, "Node 2:\n");
+         kbnode_dump (ancestor, stderr);
+         INCPTR(*errors);
+         goto cleanup;
       }
 
       if (!(node_instantiate (ref, ret, all, errors, warnings))) {
@@ -650,6 +682,7 @@ void kbnode_check (kbnode_t *node, size_t *errors, size_t *warnings)
       INCPTR(*warnings);
    }
 
+   // Ensure that the mandatory keys exist
    for (size_t i=0; i<sizeof required/sizeof required[0]; i++) {
       if (!(kbsymtab_exists (node->symtab, required[i]))) {
          KBPARSE_WARN (fname, line, "Missing required key '%s'\n", required[i]);

@@ -9,6 +9,7 @@ export TESTSCRIPTS="\
    test-mangled-input.sh\
    test-missing-reference.sh\
    test-missing-required.sh\
+   test-self-dependency.sh\
    test-unknown-node-type.sh\
    test-xor-failure-1.sh\
    test-xor-failure-2.sh\
