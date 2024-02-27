@@ -125,7 +125,7 @@ void kbsymtab_dump (const kbsymtab_t *s, FILE *outf)
    char *tmp = NULL;
 
    for (size_t i=0; i<nkeys && keys && keys[i]; i++) {
-      char **value = NULL;
+      const char **value = NULL;
       if (!(ds_hmap_get_str_ptr (s->table, keys[i], (void **)&value, NULL))) {
          KBWARN ("Failed to retrieve value for key [%s]\n", keys[i]);
       }
@@ -191,7 +191,7 @@ kbsymtab_t *kbsymtab_copy (kbsymtab_t *st)
    }
 
    for (size_t i=0; keys && keys[i]; i++) {
-      char **srcvals = NULL;
+      const char **srcvals = NULL;
       if (!(ds_hmap_get_str_ptr (st->table, keys[i], (void **)&srcvals, NULL))) {
          KBERROR ("OOM getting source values\n");
          goto cleanup;
@@ -230,6 +230,16 @@ const char **kbsymtab_get (const kbsymtab_t *st, const char *key)
    }
 
    return ret;
+}
+
+const char **kbsymtab_keys (const kbsymtab_t *st)
+{
+   const char **keys = NULL;
+   if (!(ds_hmap_keys (st->table, (void ***)&keys, NULL))) {
+      free (keys);
+      return NULL;
+   }
+   return keys;
 }
 
 enum keytype_t {
@@ -379,7 +389,7 @@ bool kbsymtab_set (const char *fname, size_t lc, bool force,
    // indexed element within it.
 
    // If the index is out of bounds, error out of this function
-   size_t nstrings = kbutil_strarray_length (existing);
+   size_t nstrings = kbutil_strarray_length ((const char **)existing);
    if (index >= nstrings) {
       KBPARSE_ERROR (fname, lc, "Out of bounds write to `%s` at index %zu\n",
             keycopy, index);
@@ -387,7 +397,7 @@ bool kbsymtab_set (const char *fname, size_t lc, bool force,
    }
    // If the passed in value is an array, refuse to store array within an
    // array
-   size_t varray_len = kbutil_strarray_length (varray);
+   size_t varray_len = kbutil_strarray_length ((const char **)varray);
    if (varray_len > 1) {
       KBPARSE_ERROR (fname, lc, "Cannot insert array `%s` into array at `%s[%zu]`\n",
             value, keycopy, index);
@@ -446,7 +456,7 @@ bool kbsymtab_append (const char *fname, size_t lc, bool force,
    }
 
    ds_hmap_get_str_ptr (st->table, keycopy, (void **)&existing, NULL);
-   size_t nexisting = kbutil_strarray_length (existing);
+   size_t nexisting = kbutil_strarray_length ((const char **)existing);
    if (keytype == keytype_INDEX && nexisting && index >= nexisting) {
       KBPARSE_ERROR (fname, lc, "Out of bounds write to `%s`\n", key);
       goto cleanup;

@@ -376,6 +376,16 @@ void kbnode_dump (const kbnode_t *node, FILE *outf)
    }
 }
 
+const ds_array_t *kbnode_children (const kbnode_t *node)
+{
+   return node ? node->children : NULL;
+}
+
+const char **kbnode_keys (const kbnode_t *node)
+{
+   return kbsymtab_keys (node->symtab);
+}
+
 void kbnode_del (kbnode_t *node)
 {
    node_del (&node);
@@ -384,7 +394,7 @@ void kbnode_del (kbnode_t *node)
 bool kbnode_get_srcdef (kbnode_t *node, const char **fname, size_t *line)
 {
    *line = 0;
-   *fname = NULL;
+   *fname = "unset";
 
    if (!node) {
       return false;
@@ -401,9 +411,36 @@ bool kbnode_get_srcdef (kbnode_t *node, const char **fname, size_t *line)
    return true;
 }
 
-const char *kbnode_get (kbnode_t *node, const char *key)
+const char *kbnode_getvalue_first (kbnode_t *node, const char *key)
 {
    return node == NULL ? "" : kbsymtab_get_string (node->symtab, key);
+}
+
+const char **kbnode_getvalue_all (kbnode_t *node, const char *key)
+{
+   static const char *dummy[] = {
+      "",
+      NULL,
+   };
+
+   return node == NULL ? dummy : kbsymtab_get (node->symtab, key);
+}
+
+bool kbnode_set_single (kbnode_t *node, const char *key, size_t index,
+                        char *newvalue)
+{
+   const char **values = kbsymtab_get (node->symtab, key);
+   if (!values || !values[0]) {
+      return false;
+   }
+   size_t nvalues = kbutil_strarray_length (values);
+   if (index > nvalues) {
+      return false;
+   }
+
+   free ((void *)values[index]);
+   values[index] = newvalue;
+   return true;
 }
 
 
@@ -710,11 +747,11 @@ ds_array_t *kbnode_filter_types (ds_array_t *nodes, const char *type, ...)
    return ret;
 }
 
-ds_array_t *kbnode_filter_varname (ds_array_t *nodes, const char *varname, ...)
+ds_array_t *kbnode_filter_keyname (ds_array_t *nodes, const char *keyname, ...)
 {
    va_list ap;
-   va_start (ap, varname);
-   char **names = collect_args (varname, ap);
+   va_start (ap, keyname);
+   char **names = collect_args (keyname, ap);
    ds_array_t *ret = ds_array_filter (nodes, node_filter_names, names);
    free (names);
    return ret;
@@ -742,5 +779,15 @@ kbnode_t *kbnode_instantiate (const kbnode_t *src, ds_array_t *all,
 
 
    return ret;
+}
+
+const char **kbnode_resolve (const kbnode_t *node, const char *symbol)
+{
+   if (!node || !symbol)
+      return NULL;
+
+   const char **ret = kbsymtab_get (node->symtab, symbol);
+
+   return ret ? ret : kbnode_resolve (node->parent, symbol);
 }
 

@@ -5,7 +5,10 @@
 export TESTSCRIPTS="\
    test-broken.sh\
    test-circular-dependency.sh\
+   test-unresolved-variable.sh\
    test-duplicates.sh\
+   test-happy-cline.sh\
+   test-happy-resolved-variable.sh\
    test-mangled-input.sh\
    test-missing-reference.sh\
    test-missing-required.sh\
@@ -18,13 +21,19 @@ export TESTSCRIPTS="\
 
 TESTDIR=`dirname $0`
 
-
+NFAILURES=0
+NPASSES=0
 for X in $TESTSCRIPTS; do
    $TESTDIR/$X &> /dev/null
    if [ $? -ne 0 ]; then
-      echo FAILED: $X
+      echo -e "${RED}${REV}✘${NC} $X"
+      NFAILURES=$(($NFAILURES + 1))
    else
-      echo PASSED: $X
+      echo -e "${GREEN}✓${NC} $X"
+      NPASSES=$(($NPASSES + 1))
    fi
 done
 
+echo $NFAILURES failed, $NPASSES passed
+
+exit $NFAILURES

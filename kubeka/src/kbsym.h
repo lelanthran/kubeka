@@ -18,6 +18,8 @@ extern "C" {
 
    const char **kbsymtab_get (const kbsymtab_t *st, const char *key);
 
+   const char **kbsymtab_keys (const kbsymtab_t *st);
+
    bool kbsymtab_set (const char *fname, size_t lc, bool force,
                       kbsymtab_t *st, const char *key, const char *value);
 

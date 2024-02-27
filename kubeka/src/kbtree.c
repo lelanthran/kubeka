@@ -5,12 +5,17 @@
 
 #include "ds_array.h"
 #include "ds_set.h"
+#include "ds_str.h"
 
 
 #include "kbutil.h"
 #include "kbsym.h"
 #include "kbnode.h"
 #include "kbtree.h"
+
+#define INCPTR(x)    do {\
+   (x) = (x) + 1;\
+} while (0)
 
 static int cmpnode (const void *lhs, size_t lhslen,
                     const void *rhs, size_t rhslen)
@@ -115,16 +120,162 @@ cleanup:
    return ret;
 }
 
-void kbtree_vsubst (kbnode_t *root, size_t *nerrors, size_t *nwarnings)
+static char *resolve (char *ref, const kbnode_t *node, size_t *nerrors,
+                      const char *fname, size_t line)
 {
+   if ((strchr (ref, ' '))) {
+      // TODO: Resolve a builtin function call
+      KBPARSE_ERROR (fname, line, "Found [%s]: function calls not implemented yet\n",
+               ref);
+      INCPTR (*nerrors);
+      return NULL;
+   }
+
+   char *start = &ref[2];
+   char *end = strchr (start, ')');
+   if (!end) {
+      KBPARSE_ERROR (fname, line, "Missing terminating ')' in symbol reference\n");
+      INCPTR (*nerrors);
+      return NULL;
+   }
+
+   *end = 0;
+   const char **values = kbnode_resolve (node, start);
+   *end = ')';
+
+   if (!values) {
+      KBPARSE_ERROR (fname, line, "Failed to find values for symbol %s\n",
+               start);
+      INCPTR (*nerrors);
+      return NULL;
+   }
+
+   return kbutil_strarray_format (values);
+}
+
+static char *find_next_ref (const char *src, size_t *nerrors,
+                            const char *fname, size_t line)
+{
+   char *ret = NULL;
+   char *start = strstr (src, "$(");
+   if (!start) {
+      return NULL;
+   }
+
+   char *end = strchr (&start[2], ')');
+   if (!end) {
+      KBPARSE_ERROR (fname, line, "Missing terminating ')' in symbol reference\n");
+      INCPTR (*nerrors);
+      return NULL;
+   }
+   end++;
+
+   size_t nbytes = end - start;
+   nbytes++;
+   if (!(ret = calloc (nbytes, 1))) {
+      INCPTR (*nerrors);
+      return NULL;
+   }
+
+   size_t index = 0;
+   while (start < end) {
+      ret[index++] = *start++;
+   }
+
+   return ret;
+}
+
+void kbtree_eval (kbnode_t *root, size_t *nerrors, size_t *nwarnings)
+{
+   const char **keys = kbnode_keys (root);
+   const char *fname;
+   size_t line;
+
+   *nerrors = 0;
+   *nwarnings = 0;
+
+   if (!(kbnode_get_srcdef (root, &fname, &line))) {
+      KBERROR ("Failed to get node filename and line number information\n");
+      INCPTR (*nerrors);
+      goto cleanup;
+   }
+
+   if (!keys) {
+      KBPARSE_ERROR (fname, line, "Failed to get node symbols\n");
+      INCPTR (*nerrors);
+      goto cleanup;
+   }
+
+
    // for each $key in the symtab {
    //    for each $value in the array of values from $key {
-   //       for each $varef:key in the $value {
-   //          $value = symlookup ($varef:key)
-   //          substitute ($varef:position, $value)
+   //       value = perform_subst (value, node)
+   //       node_set_symbol
    //       }
    //    }
    // }
+   //
+
+   for (size_t i=0; keys[i]; i++) {
+      const char **values = kbnode_getvalue_all (root, keys[i]);
+      if (!values) {
+         KBPARSE_ERROR (fname, line, "Failed to get values for symbol %s\n",
+                  keys[i]);
+         INCPTR (*nwarnings); // TODO: Should this be an error?
+         continue;
+      }
+
+      for (size_t j=0; values[j]; j++) {
+
+         if (!(kbnode_get_srcdef (root, &fname, &line))) {
+            KBERROR ("Failed to get node filename and line number information\n");
+            INCPTR (*nerrors);
+            goto cleanup;
+         }
+
+         char *newvalue = ds_str_dup (values[j]);
+         char *ref = NULL;
+         size_t errors = 0;
+
+         while (!errors && (ref = find_next_ref (newvalue, &errors, fname, line))) {
+            char *resolved = resolve (ref, root, &errors, fname, line);
+            if (errors || !resolved) {
+               free (ref);
+               ref = NULL;
+               break;
+            }
+            char *tmp = ds_str_strsubst (newvalue, ref, resolved, NULL);
+            free (ref);
+            ref = NULL;
+            free (resolved);
+            resolved = NULL;
+            if (!tmp) {
+               KBERROR ("OOM performing substitution\n");
+               break;
+            }
+            free (newvalue);
+            newvalue = tmp;
+        }
+         *nerrors = (*nerrors) + errors;
+         if (errors) {
+            KBPARSE_ERROR (fname, line, "Aborting due to errors\n");
+            free (newvalue);
+            break;
+         }
+
+         kbnode_set_single (root, keys[i], j, newvalue);
+      }
+   }
+
+   const ds_array_t *children = kbnode_children (root);
+   size_t nchildren = ds_array_length (children);
+   for (size_t i=0; i<nchildren; i++) {
+      kbnode_t *child = ds_array_get (children, i);
+      kbtree_eval (child, nerrors, nwarnings);
+   }
+
+cleanup:
+   free (keys);
 }
 
 

@@ -1,11 +1,15 @@
+RED='\e[0;31m'
+GREEN='\e[0;32m'
+REV='\e[7m'
+NC='\e[0m'
 
 failed() {
-   echo FAILED: $0
+   echo -e ${RED}${REV}FAILED${NC} $0
    exit 127
 }
 
 passed() {
-   echo PASSED: $0
+   echo -e ${GREEN}${REV}PASSED${NC} $0
    exit 0
 }
 
@@ -20,3 +24,4 @@ if [ "$1" == "gdb" ]; then
 fi
 
 PROG="$PROG recent/bin/kubeka.elf"
+

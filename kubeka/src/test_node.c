@@ -124,8 +124,8 @@ static int t_filter (const char *ifname, const char *ofname)
    dump_nodelist (f1, outf);
 
    fprintf (outf, "f2 ====================================\n");
-   if (!(f2 = kbnode_filter_varname (nodes, "for_filter", NULL))) {
-      fprintf (stderr, "Failed to filter by varname\n");
+   if (!(f2 = kbnode_filter_keyname (nodes, "for_filter", NULL))) {
+      fprintf (stderr, "Failed to filter by keyname\n");
       goto cleanup;
    }
    dump_nodelist (f2, outf);

@@ -445,9 +445,9 @@ int main (int argc, char **argv)
       size_t errors = 0,
              warnings = 0;
 
-      kbtree_vsubst (root, &errors, &warnings);
-      ERROR ("Node [%s]: %zu errors, %zu warnings\n",
-               kbnode_get (root, KBNODE_KEY_ID), errors, warnings);
+      kbtree_eval (root, &errors, &warnings);
+      printf ("Node [%s]: %zu errors, %zu warnings\n",
+               kbnode_getvalue_first (root, KBNODE_KEY_ID), errors, warnings);
       nerrors += errors;
       nwarnings += warnings;
    }
@@ -483,7 +483,7 @@ int main (int argc, char **argv)
    ret = EXIT_SUCCESS;
 cleanup:
    fprintf (stdout, "***** Return value: %i *****\n", ret);
-   ds_array_iterate (dedup_nodes, (void (*) (void *, void*))kbnode_dump, stdout);
+   ds_array_iterate (trees, (void (*) (void *, void*))kbnode_dump, stdout);
    ds_array_fptr (paths, free);
    ds_array_fptr (files, free);
    ds_array_fptr (nodes, (void (*) (void *))kbnode_del);

@@ -55,8 +55,17 @@ void kbutil_strarray_del (char **sa)
    free (sa);
 }
 
-char *kbutil_strarray_format (char **sa)
+char *kbutil_strarray_format (const char **sa)
 {
+   size_t nvalues = kbutil_strarray_length (sa);
+   if (nvalues == 0) {
+      return ds_str_dup ("");
+   }
+   if (nvalues == 1) {
+      return ds_str_dup (sa[0]);
+   }
+
+
    char *ret = ds_str_dup ("[ ");
    const char *delim = "";
    for (size_t i=0; sa && sa[i]; i++) {
@@ -75,7 +84,7 @@ char *kbutil_strarray_format (char **sa)
    return ret;
 }
 
-size_t kbutil_strarray_length (char **sa)
+size_t kbutil_strarray_length (const char **sa)
 {
    size_t ret = 0;
    if (!sa || !sa[0])
@@ -93,7 +102,7 @@ char **kbutil_strarray_append (char ***dst, char *s)
       return NULL;
    }
 
-   size_t n = kbutil_strarray_length (*dst);
+   size_t n = kbutil_strarray_length ((const char **)*dst);
    char **tmp = realloc (*dst, (sizeof *dst) * (n + 2));
    if (!tmp) {
       return NULL;
@@ -147,7 +156,7 @@ cleanup:
    return !error;
 }
 
-char **kbutil_strarray_copy (char **src)
+char **kbutil_strarray_copy (const char **src)
 {
    bool error = true;
 

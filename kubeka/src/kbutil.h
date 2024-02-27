@@ -47,10 +47,10 @@ extern "C" {
                                       const char *output));
 
    void kbutil_strarray_del (char **sa);
-   char *kbutil_strarray_format (char **sa);
-   size_t kbutil_strarray_length (char **sa);
+   char *kbutil_strarray_format (const char **sa);
+   size_t kbutil_strarray_length (const char **sa);
    char **kbutil_strarray_append (char ***dst, char *s);
-   char **kbutil_strarray_copy (char **src);
+   char **kbutil_strarray_copy (const char **src);
 
 
 #ifdef __cplusplus
