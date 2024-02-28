@@ -2,7 +2,7 @@
 
 . tests/manual/tests.inc
 
-make debug && $PROG \
+$PROG \
    -f tests/input/broken/xor-failure-2.kubeka && failed
 
 passed

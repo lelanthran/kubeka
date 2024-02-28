@@ -12,6 +12,7 @@
 #include "kbsym.h"
 #include "kbnode.h"
 #include "kbtree.h"
+#include "kbbi.h"
 
 #define INCPTR(x)    do {\
    (x) = (x) + 1;\
@@ -120,15 +121,48 @@ cleanup:
    return ret;
 }
 
+static char *exec_builtin (char *ref, const kbnode_t *node, size_t *nerrors,
+                           const char *fname, size_t line)
+{
+   char *func = &ref[2];
+   char *params = strchr (func, ' ');
+   if (!params) {
+      KBPARSE_ERROR (fname, line, "Failed to parse '%s' as a function call\n",
+            func);
+      INCPTR (*nerrors);
+      return NULL;
+   }
+   *params++ = 0;
+   char *end = strchr (params, ')');
+   if (!end) {
+      KBPARSE_ERROR (fname, line, "Failed to find end of function call in [%s]\n",
+            params);
+      INCPTR (*nerrors);
+      return NULL;
+   }
+   *end = 0;
+
+
+   kbbi_fptr_t *fptr = kbbi_fptr (func);
+   if (!fptr) {
+      KBPARSE_ERROR (fname, line, "Call to undefined function '%s'\n",
+               func);
+      INCPTR (*nerrors);
+      return NULL;
+   }
+
+   char *ret = fptr (func, params, node, nerrors, fname, line);
+   *end = ')';
+   *(params - 1) = ' ';
+   KBERROR ("function [%s] returned [%s]\n", ref, ret);
+   return ret;
+}
+
 static char *resolve (char *ref, const kbnode_t *node, size_t *nerrors,
                       const char *fname, size_t line)
 {
    if ((strchr (ref, ' '))) {
-      // TODO: Resolve a builtin function call
-      KBPARSE_ERROR (fname, line, "Found [%s]: function calls not implemented yet\n",
-               ref);
-      INCPTR (*nerrors);
-      return NULL;
+      return exec_builtin (ref, node, nerrors, fname, line);
    }
 
    char *start = &ref[2];
@@ -190,9 +224,6 @@ void kbtree_eval (kbnode_t *root, size_t *nerrors, size_t *nwarnings)
    const char **keys = kbnode_keys (root);
    const char *fname;
    size_t line;
-
-   *nerrors = 0;
-   *nwarnings = 0;
 
    if (!(kbnode_get_srcdef (root, &fname, &line))) {
       KBERROR ("Failed to get node filename and line number information\n");

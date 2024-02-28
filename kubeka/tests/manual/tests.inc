@@ -25,3 +25,4 @@ fi
 
 PROG="$PROG recent/bin/kubeka.elf"
 
+make debug || failed

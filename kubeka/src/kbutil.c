@@ -156,6 +156,56 @@ cleanup:
    return !error;
 }
 
+char **kbutil_strsplit (const char *src, char delim)
+{
+   char *tmp = ds_str_dup (src);
+   if (!tmp) {
+      KBERROR ("OOM error duplicating string [%s]\n", src);
+      return NULL;
+   }
+
+   char *tok = NULL;
+   char delims[2] = { delim, 0 };
+   char *p1 = tmp;
+   char *saveptr = NULL;
+   size_t nitems = 1;
+
+   while ((tok = strtok_r (p1, delims, &saveptr))) {
+      p1 = NULL;
+      nitems++;
+   }
+
+   char **ret = calloc (nitems, sizeof *ret);
+   if (!ret) {
+      KBERROR ("OOM allocating result\n");
+      free (tmp);
+      return NULL;
+   }
+
+   free (tmp);
+   if (!(tmp = ds_str_dup (src))) {
+      KBERROR ("OOM duplicating string (twice) [%s]\n", src);
+      free (ret);
+      return NULL;
+   }
+
+   p1 = tmp;
+   size_t i = 0;
+
+   while ((tok = strtok_r (p1, delims, &saveptr))) {
+      p1 = NULL;
+      if (!(ret[i++] = ds_str_dup (tok))) {
+         KBERROR ("OOM copying token [%s]\n", tok);
+         kbutil_strarray_del (ret);
+         free (tmp);
+         return NULL;
+      }
+   }
+
+   free (tmp);
+   return ret;
+}
+
 char **kbutil_strarray_copy (const char **src)
 {
    bool error = true;

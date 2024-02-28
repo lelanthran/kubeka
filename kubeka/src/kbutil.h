@@ -14,12 +14,12 @@
 #define H_KBUTIL
 
 #define KBWARN(...)     do {\
-   fprintf (stderr, "[%s:%i] Program warning: ", __FILE__, __LINE__);\
+   fprintf (stderr, "[%s:%i] Warning in %s(): ", __FILE__, __LINE__, __func__);\
    fprintf (stderr, __VA_ARGS__);\
 } while (0)
 
 #define KBERROR(...)     do {\
-   fprintf (stderr, "[%s:%i] Program error: ", __FILE__, __LINE__);\
+   fprintf (stderr, "[%s:%i] Error in %s(): ", __FILE__, __LINE__, __func__);\
    fprintf (stderr, __VA_ARGS__);\
 } while (0)
 
@@ -46,6 +46,7 @@ extern "C" {
                      int (*testfunc) (const char *input,
                                       const char *output));
 
+   char **kbutil_strsplit (const char *src, char delim);
    void kbutil_strarray_del (char **sa);
    char *kbutil_strarray_format (const char **sa);
    size_t kbutil_strarray_length (const char **sa);

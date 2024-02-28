@@ -8,6 +8,7 @@ export TESTSCRIPTS="\
    test-unresolved-variable.sh\
    test-duplicates.sh\
    test-happy-cline.sh\
+   test-happy-environment-variables.sh\
    test-happy-resolved-variable.sh\
    test-mangled-input.sh\
    test-missing-reference.sh\
@@ -24,10 +25,11 @@ TESTDIR=`dirname $0`
 NFAILURES=0
 NPASSES=0
 for X in $TESTSCRIPTS; do
-   $TESTDIR/$X &> /dev/null
+   $TESTDIR/$X &> /tmp/$X.output
    if [ $? -ne 0 ]; then
       echo -e "${RED}${REV}✘${NC} $X"
       NFAILURES=$(($NFAILURES + 1))
+      cat /tmp/$X.output
    else
       echo -e "${GREEN}✓${NC} $X"
       NPASSES=$(($NPASSES + 1))

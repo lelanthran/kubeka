@@ -2,7 +2,7 @@
 
 . tests/manual/tests.inc
 
-make debug && $PROG \
+$PROG \
    -f tests/input/broken/circular-dependency.kubeka && failed
 
 passed
