@@ -1,0 +1,27 @@
+Failed to open directory [/etc/kubeka] for reading: No such file or directory
+Duplicate node found ...
+Node-1 found in [tests/input/duplicates.kubeka:1]
+Node-2 found in [tests/input/duplicates.kubeka:6]
+=== Node-1 dump follows: === 
+Node [job] with parent [false]: 0x0
+   _FILENAME: tests/input/duplicates.kubeka
+   _LINE: 1
+   EXEC: echo Hello World (Node 1)
+   MESSAGE: A duplicate node 1/2
+   ID: duplicates-1
+=== Node-2 dump follows: === 
+Node [job] with parent [false]: 0x0
+   _FILENAME: tests/input/duplicates.kubeka
+   _LINE: 6
+   EXEC: echo Hello World (Node 2)
+   MESSAGE: A duplicate node 2/2
+   ID: duplicates-1
+[src/kbtree.c:97] Error in kbtree_coalesce(): Failed to add duplicated node
+Aborting due to 2 errors
+Processing 1 kubeka files
+Reading tests/input/duplicates.kubeka ...
+Checking for duplicates ... Found 1 duplicate in node list
+Found 0 entrypoint nodes
+Found 2 errors and 1 warnings
+Found 2 nodes (0 runnable)
+***** Return value: 1 *****

@@ -2,8 +2,7 @@
 
 . tests/manual/tests.inc
 
-$PROG \
-   -f tests/input/broken/self-dependency.kubeka && failed
+single_test self-dependency failed
 
 passed
 

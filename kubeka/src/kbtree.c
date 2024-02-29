@@ -154,7 +154,6 @@ static char *exec_builtin (char *ref, const kbnode_t *node, size_t *nerrors,
    char *ret = fptr (func, params, node, nerrors, fname, line);
    *end = ')';
    *(params - 1) = ' ';
-   KBERROR ("function [%s] returned [%s]\n", ref, ret);
    return ret;
 }
 

@@ -1,0 +1,12 @@
+Failed to open directory [/etc/kubeka] for reading: No such file or directory
+Error in tests/input/unknown-node-type.kubeka:6: Attempt to create node of unknown type: 'pow-wow'
+Error in tests/input/unknown-node-type.kubeka:6: Node creation attempt failure near: 'pow-wow'
+Fatal errors while parsing [tests/input/unknown-node-type.kubeka], aborting
+Aborting due to 1 error
+Processing 1 kubeka files
+Reading tests/input/unknown-node-type.kubeka ...
+Checking for duplicates ... none
+Found 0 entrypoint nodes
+Found 1 errors and 0 warnings
+Found 1 nodes (0 runnable)
+***** Return value: 1 *****

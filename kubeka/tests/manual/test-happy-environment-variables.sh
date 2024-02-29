@@ -2,8 +2,7 @@
 
 . tests/manual/tests.inc
 
-$PROG \
-   -f tests/input/happy/happy-environment-variables.kubeka || failed
+single_test happy-environment-variables passed
 
-passed
+failed
 

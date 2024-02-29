@@ -1,0 +1,50 @@
+Failed to open directory [/etc/kubeka] for reading: No such file or directory
+Instantiating [self-dependency-manual]
+Instantiating [self-dependency-3]
+Checking [self-dependency-manual] for [self-dependency-2]
+Instantiating [self-dependency-2]
+Checking [self-dependency-3] for [self-dependency-2]
+Checking [self-dependency-manual] for [self-dependency-2]
+Instantiating [self-dependency-2]
+Checking [self-dependency-2] for [self-dependency-2]
+Error in tests/input/self-dependency.kubeka:6: Reference-cycle found. Node [self-dependency-2] recursively calls node [self-dependency-2]
+Node 1:
+Node [job] with parent [true]: 0x0
+   _FILENAME: tests/input/self-dependency.kubeka
+   JOBS: self-dependency-2
+   _LINE: 6
+   MESSAGE: self-dependency-2
+   ID: self-dependency-2
+Node [job] with parent [true]: 0x0
+   _FILENAME: tests/input/self-dependency.kubeka
+   JOBS: self-dependency-2
+   _LINE: 6
+   MESSAGE: self-dependency-2
+   ID: self-dependency-2
+Node 2:
+Node [job] with parent [true]: 0x0
+   _FILENAME: tests/input/self-dependency.kubeka
+   JOBS: self-dependency-2
+   _LINE: 6
+   MESSAGE: self-dependency-2
+   ID: self-dependency-2
+Node [job] with parent [true]: 0x0
+   _FILENAME: tests/input/self-dependency.kubeka
+   JOBS: self-dependency-2
+   _LINE: 6
+   MESSAGE: self-dependency-2
+   ID: self-dependency-2
+Error in tests/input/self-dependency.kubeka:6: Failed to instantiate child 0 [self-dependency-2]
+Error in tests/input/self-dependency.kubeka:11: Failed to instantiate child 0 [self-dependency-2]
+Error in tests/input/self-dependency.kubeka:16: Failed to instantiate child 0 [self-dependency-3]
+Error in tests/input/self-dependency.kubeka:16: Failed to instantiate node
+src/kubeka.c:435 Internal error: Errors encountered during instantiation of node
+src/kubeka.c:438 Internal error: OOM storing new root node
+Aborting due to 4 errors
+Processing 1 kubeka files
+Reading tests/input/self-dependency.kubeka ...
+Checking for duplicates ... none
+Found 1 entrypoint nodes
+Found 4 errors and 0 warnings
+Found 4 nodes (0 runnable)
+***** Return value: 1 *****

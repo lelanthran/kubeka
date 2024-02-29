@@ -2,8 +2,7 @@
 
 . tests/manual/tests.inc
 
-$PROG \
-   -f tests/input/happy/happy-cline.kubeka || failed
+single_test happy-cline passed
 
-passed
+failed
 

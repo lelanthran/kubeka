@@ -1,0 +1,28 @@
+Failed to open directory [/etc/kubeka] for reading: No such file or directory
+Instantiating [circular-dependency-manual]
+Instantiating [unresolved-variable-1]
+Error in tests/input/unresolved-variable.kubeka:1: Failed to find values for symbol CALER_VAR)
+Error in tests/input/unresolved-variable.kubeka:1: Aborting due to errors
+Aborting due to 1 error
+Processing 1 kubeka files
+Reading tests/input/unresolved-variable.kubeka ...
+Checking for duplicates ... none
+Found 1 entrypoint nodes
+Node [circular-dependency-manual]: 1 errors, 0 warnings
+Found 1 errors and 0 warnings
+Found 2 nodes (1 runnable)
+***** Return value: 1 *****
+Node [entrypoint] with parent [false]: 0x0
+   _FILENAME: tests/input/unresolved-variable.kubeka
+   CALLER_VAR: Set in caller
+   JOBS: unresolved-variable-1
+   _LINE: 7
+   MESSAGE: Starting node manually
+   ID: circular-dependency-manual
+Node [job] with parent [true]: 0x0
+   _FILENAME: tests/input/unresolved-variable.kubeka
+   SELF_VAR: Set in self
+   _LINE: 1
+   EXEC: echo "Checking for $(CALER_VAR)"
+   MESSAGE: circular-dependency-1
+   ID: unresolved-variable-1

@@ -25,7 +25,7 @@ TESTDIR=`dirname $0`
 NFAILURES=0
 NPASSES=0
 for X in $TESTSCRIPTS; do
-   $TESTDIR/$X &> /tmp/$X.output
+   $TESTDIR/$X $1 &> /tmp/$X.output
    if [ $? -ne 0 ]; then
       echo -e "${RED}${REV}✘${NC} $X"
       NFAILURES=$(($NFAILURES + 1))

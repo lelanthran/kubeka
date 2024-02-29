@@ -2,8 +2,7 @@
 
 . tests/manual/tests.inc
 
-$PROG \
-   -f tests/input/broken/missing-required.kubeka && failed
+single_test missing-required failed
 
 passed
 

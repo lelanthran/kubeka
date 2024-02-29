@@ -453,7 +453,6 @@ int main (int argc, char **argv)
    }
 
 
-
    /* ***********************************************************************
     * 7. Decide whether to continue or not. Errors unconditionally cause
     *    a jump to the exit. Warnings only cause a jump if the user specified

@@ -2,8 +2,7 @@
 
 . tests/manual/tests.inc
 
-$PROG \
-   -f tests/input/broken/missing-reference.kubeka && failed
+single_test missing-reference failed
 
 passed
 

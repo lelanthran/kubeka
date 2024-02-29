@@ -2,8 +2,7 @@
 
 . tests/manual/tests.inc
 
-$PROG \
-   -f tests/input/broken/unknown-node-type.kubeka && failed
+single_test unknown-node-type  failed
 
 passed
 

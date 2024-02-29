@@ -1,0 +1,10 @@
+Failed to open directory [/etc/kubeka] for reading: No such file or directory
+Error in tests/input/xor-failure-1.kubeka:1: Exactly one of EXEC, EMIT or JOBS must be specified
+Aborting due to 1 error
+Processing 1 kubeka files
+Reading tests/input/xor-failure-1.kubeka ...
+Checking for duplicates ... none
+Found 0 entrypoint nodes
+Found 1 errors and 0 warnings
+Found 2 nodes (0 runnable)
+***** Return value: 1 *****

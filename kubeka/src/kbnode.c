@@ -276,6 +276,7 @@ static kbnode_t *node_instantiate (const kbnode_t *src, kbnode_t *parent,
          KBPARSE_ERROR (node_filename (src), node_line (src),
                   "Failed to instantiate child %zu [%s]\n", i, jobs[i]);
          INCPTR (*errors);
+         goto cleanup;
       }
    }
 
@@ -365,8 +366,8 @@ void kbnode_dump (const kbnode_t *node, FILE *outf)
       return;
    }
 
-   fprintf (outf, "Node [%s] with parent [%p]: 0x%" PRIx64 "\n",
-         node_type_name(node->type), node->parent, node->flags);
+   fprintf (outf, "Node [%s] with parent [%s]: 0x%" PRIx64 "\n",
+         node_type_name(node->type), node->parent ? "true" : "false", node->flags);
 
    kbsymtab_dump (node->symtab, outf);
 

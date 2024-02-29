@@ -2,8 +2,7 @@
 
 . tests/manual/tests.inc
 
-$PROG \
-   -f tests/input/broken/unresolved-variable.kubeka && failed
+single_test unresolved-variable failed
 
 passed
 

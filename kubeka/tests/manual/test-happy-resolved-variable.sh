@@ -2,8 +2,7 @@
 
 . tests/manual/tests.inc
 
-$PROG \
-   -f tests/input/happy/happy-resolved-variable.kubeka || failed
+single_test happy-resolved-variable passed
 
-passed
+failed
 

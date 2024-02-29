@@ -1,0 +1,10 @@
+[job]
+ID = missing-reference-1
+MESSAGE = Missing reference
+EXEC = echo Hello World
+
+[periodic]
+ID = missing-reference-2
+MESSAGE = reference
+JOBS[] = [ missing-reference-3, missing-reference-4, missing-reference-1 ]
+

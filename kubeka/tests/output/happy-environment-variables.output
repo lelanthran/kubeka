@@ -1,0 +1,8 @@
+Failed to open directory [/etc/kubeka] for reading: No such file or directory
+Failed to open directory [tests/input/happy-environment-variables.kubeka] for reading: No such file or directory
+Processing 0 kubeka files
+Checking for duplicates ... none
+Found 0 entrypoint nodes
+Found 0 errors and 0 warnings
+Found 0 nodes (0 runnable)
+***** Return value: 0 *****

@@ -1,0 +1,17 @@
+Failed to open directory [/etc/kubeka] for reading: No such file or directory
+Warning in tests/input/missing-required.kubeka:1: Missing required key 'ID'
+Instantiating []
+Aborting due to 1 error
+Processing 1 kubeka files
+Reading tests/input/missing-required.kubeka ...
+Checking for duplicates ... none
+Found 1 entrypoint nodes
+Node []: 0 errors, 0 warnings
+Found 1 errors and 0 warnings
+Found 1 nodes (1 runnable)
+***** Return value: 1 *****
+Node [periodic] with parent [false]: 0x0
+   _FILENAME: tests/input/missing-required.kubeka
+   _LINE: 1
+   EXEC: /bin/true
+   MESSAGE: Missing required variables for node

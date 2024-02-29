@@ -84,7 +84,6 @@ KBBI_FUNC(bi_setenv)
    }
 
    kbutil_strarray_del (p);
-
    return ds_str_dup ("");
 }
 
@@ -100,7 +99,6 @@ KBBI_FUNC(bi_getenv)
    if (!value) {
       value = "";
    }
-   KBERROR ("Value for [%s]: [%s]\n", params, value);
    return ds_str_dup (value);
 }
 

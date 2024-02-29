@@ -2,8 +2,7 @@
 
 . tests/manual/tests.inc
 
-$PROG \
-   -f tests/input/broken/xor-failure-3.kubeka && failed
+single_test xor-failure-3 failed
 
 passed
 

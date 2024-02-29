@@ -2,8 +2,7 @@
 
 . tests/manual/tests.inc
 
-$PROG \
-   -f tests/input/broken/duplicates.kubeka && failed
+single_test duplicates failed
 
 passed
 
