@@ -1,10 +1,10 @@
 [job]
 ID = unknown-node-type-1
 MESSAGE = Missing reference
-EMIT = some-signal
+EMITS = some-signal
 
 [pow-wow]
 ID = unknown-node-type-2
 MESSAGE = Missing reference
-EMIT = some-other-signal
+EMITS = some-other-signal
 

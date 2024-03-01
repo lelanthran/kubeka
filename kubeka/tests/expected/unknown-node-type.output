@@ -7,6 +7,7 @@ Processing 1 kubeka files
 Reading tests/input/unknown-node-type.kubeka ...
 Checking for duplicates ... none
 Found 0 entrypoint nodes
+Linting complete.
 Found 1 errors and 0 warnings
 Found 1 nodes (0 runnable)
 ***** Return value: 1 *****

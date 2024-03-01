@@ -7,6 +7,7 @@ Reading tests/input/missing-required.kubeka ...
 Checking for duplicates ... none
 Found 1 entrypoint nodes
 Node []: 0 errors, 0 warnings
+Linting complete.
 Found 1 errors and 0 warnings
 Found 1 nodes (1 runnable)
 ***** Return value: 1 *****

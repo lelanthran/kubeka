@@ -4,6 +4,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include <errno.h>
+#include <signal.h>
 
 #include <sys/types.h>
 #include <dirent.h>
@@ -16,11 +17,20 @@
 #include "kbnode.h"
 #include "kbsym.h"
 #include "kbtree.h"
+#include "kbbi.h"
 
 #define ERROR(...)      do {\
    fprintf (stderr, "%s:%i Internal error: ", __FILE__, __LINE__);\
    fprintf (stderr, __VA_ARGS__);\
 } while (0);
+
+static sig_atomic_t g_endloop = 0;
+static void sigh (int n)
+{
+   if (n == SIGINT) {
+      g_endloop = 1;
+   }
+}
 
 /* ****************************************************************************
  * The following functions together implement a sane c/line argument processing
@@ -131,6 +141,9 @@ static void print_help_msg (void)
 "              Display this message and exit with a successful return code.",
 "  -d | --daemon",
 "              Run in the background, and return a successful return code.",
+"  -l | --lint",
+"              Read and parse all files for errors and warnings. Do not attempt",
+"              to execute any node.",
 "  -p | --path",
 "              Path containing additional configuration *.kubeka files. This",
 "              option can be specified multiple times, once for each path that",
@@ -278,13 +291,21 @@ int main (int argc, char **argv)
       counter++;
    }
 
-   // 1.4 Check if running in single-shot mode.
+   // 1.4.1 Check if running in single-shot mode.
    const char *opt_entry = opt_short (argc, argv, 'j');
    if (!opt_entry) {
       opt_entry = opt_long (argc, argv, "job");
    }
+   // 1.4.2 Only a single -j flag is supported in single-shot mode
+   if (opt_short (argc, argv, 'j') || opt_long (argc, argv, "job")) {
+      ERROR ("Cannot specify more than one job to run\n");
+      goto cleanup;
+   }
 
-   // 1.5 Check if we are to daemonize
+   // 1.5 Check if we are to lint only
+   bool opt_lint = opt_bool (argc, argv, "lint", 'l');
+
+   // 1.6 Check if we are to daemonize
    if ((opt_bool (argc, argv, "daemon", 'd'))) {
       // Sanity check - user cannot specify both jobs and daemonize
       if (opt_entry) {
@@ -292,20 +313,22 @@ int main (int argc, char **argv)
          goto cleanup;
       }
 
-      pid_t pid = fork ();
-      if (pid < 0) {
-         ERROR ("Failed to create child process: %m\n");
-         goto cleanup;
+      if (!opt_lint) {
+         pid_t pid = fork ();
+         if (pid < 0) {
+            ERROR ("Failed to create child process: %m\n");
+            goto cleanup;
+         }
+         if (pid > 0) {
+            printf ("Detached process created with PID: %i\n", pid);
+            ret = EXIT_SUCCESS;
+            goto cleanup;
+         }
+         printf ("Daemon %s started with pid %i\n", argv[0], pid);
       }
-      if (pid > 0) {
-         printf ("Detached process created with PID: %i\n", pid);
-         ret = EXIT_SUCCESS;
-         goto cleanup;
-      }
-      printf ("Daemon %s started with pid %i\n", argv[0], pid);
    }
 
-   // 1.6 Set the remaining options
+   // 1.7 Set the remaining options
    bool opt_werror = opt_bool (argc, argv, "Werror", 'W');
 
    // At this point we have completed all option processing, may as well check if any
@@ -439,6 +462,15 @@ int main (int argc, char **argv)
       }
    }
 
+
+
+   /* ***********************************************************************
+    * 7. Evaluate all the entrypoints. This *still** doesn't run them, though.
+    * The evaluation attempts to resolve every symbol only.
+    * ***********************************************************************/
+
+
+
    nnodes = ds_array_length (trees);
    for (size_t i=0; i<nnodes; i++) {
       kbnode_t *root = ds_array_get (trees, i);
@@ -454,13 +486,14 @@ int main (int argc, char **argv)
 
 
    /* ***********************************************************************
-    * 7. Decide whether to continue or not. Errors unconditionally cause
+    * 8. Decide whether to continue or not. Errors unconditionally cause
     *    a jump to the exit. Warnings only cause a jump if the user specified
     *    -W/--Werror
     * ***********************************************************************/
 
 
 
+   printf ("Linting complete.\n");
    printf ("Found %zu errors and %zu warnings\n", nerrors, nwarnings);
    printf ("Found %zu nodes (%zu runnable)\n",
             ds_array_length (nodes), ds_array_length (trees));
@@ -477,8 +510,58 @@ int main (int argc, char **argv)
    }
 
 
+   /* ***********************************************************************
+    * 9. If user just wants to lint, we exit now.
+    *
+    */
+   if (opt_lint) {
+      ret = EXIT_SUCCESS;
+      goto cleanup;
+   }
 
-   // 7. Start a thread for each entrypoint.
+
+
+   /* ***********************************************************************
+    * 10. Finally, run all the entrypoints. For a daemon, we create a new thread
+    * for each entrypoint, which waits until it is triggered. For a command-line
+    * invocation, we sequentially step through the entrypoints in `tree` and
+    * execute each one in turn.
+    * ***********************************************************************/
+
+
+   // If an entrypoint is specified, run it then exit.
+   if (opt_entry) {
+      // Set ret depending on what the execution of that job resulted in
+      ret = kbbi_launch (opt_entry, dedup_nodes, &nerrors, &nwarnings);
+      if (ret != EXIT_SUCCESS) {
+         fprintf (stderr, "Failed to execute job [%s]: %zu errors, %zu warnings\n",
+               opt_entry, nerrors, nwarnings);
+      }
+
+      goto cleanup;
+   }
+
+   // If no entrypoint specified, start a thread for each entrypoint
+   if (!opt_entry) {
+      // Wait for SIGINT to tell us to exit
+      if ((signal (SIGINT, sigh) == SIG_ERR)) {
+         ERROR ("Failed to set signal handler for SIGINT: %m\n");
+         goto cleanup;
+      }
+
+      while (!g_endloop) {
+         // Do nothing
+      }
+
+      // Tell all threads to end
+
+      // Wait for all threads to end
+      ret = EXIT_SUCCESS;
+   }
+
+
+
+   // TODO: This must come out, not needed when everything is working
    ret = EXIT_SUCCESS;
 cleanup:
    fprintf (stdout, "***** Return value: %i *****\n", ret);

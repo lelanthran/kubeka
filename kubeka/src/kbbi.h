@@ -12,6 +12,9 @@ extern "C" {
 
    kbbi_fptr_t *kbbi_fptr (const char *name);
 
+   int kbbi_launch (const char *name, ds_array_t *nodes,
+                    size_t *nerrors, size_t *nwarnings);
+
 
 #ifdef __cplusplus
 };

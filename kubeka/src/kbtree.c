@@ -236,6 +236,13 @@ void kbtree_eval (kbnode_t *root, size_t *nerrors, size_t *nwarnings)
       goto cleanup;
    }
 
+   // TODO: URGENT - ensure that signals created with EMITTED are in some
+   // nodes HANDLES variables. This requires that the caller passes a list
+   // of all the nodes.
+   //
+   //
+   // If this has any EMITS values, then the corresponding HANDLES must
+   // be found in a node somewhere.
 
    // for each $key in the symtab {
    //    for each $value in the array of values from $key {

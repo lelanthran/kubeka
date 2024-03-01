@@ -31,7 +31,7 @@ PROG="$PROG recent/bin/kubeka.elf"
 
 single_test() {
    rm -f vg.txt
-   $PROG \
+   $PROG --lint \
       -f  tests/input/$1.kubeka \
       &> tests/output/$1.output && eval $2
             diff tests/expected/$1.output tests/output/$1.output || failed

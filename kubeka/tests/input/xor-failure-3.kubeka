@@ -8,7 +8,7 @@ JOBS = xor-failure-3.2
 [job]
 ID = xor-failure-3.2
 MESSAGE = Should not generate error (dependency should generate error)
-EMIT = NEVER-EMITTED-SIGNAL
+EMITS = NEVER-EMITTED-SIGNAL
 
 
 

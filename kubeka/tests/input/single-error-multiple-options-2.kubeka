@@ -1,0 +1,12 @@
+[job]
+ID = single-fail-multiple-options-1-2
+MESSAGE = No message
+EXEC = /bin/true
+
+[entrypoint]
+ID = single-fail-multiple-options-2-2
+MESSAGE = Still no message
+JOBS[] = [ single-fail-multiple-options-1-2 ]
+
+
+

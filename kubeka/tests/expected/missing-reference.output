@@ -9,6 +9,7 @@ Reading tests/input/missing-reference.kubeka ...
 Checking for duplicates ... none
 Found 1 entrypoint nodes
 Node [missing-reference-2]: 0 errors, 0 warnings
+Linting complete.
 Found 2 errors and 0 warnings
 Found 2 nodes (1 runnable)
 ***** Return value: 1 *****

@@ -9,6 +9,7 @@ Reading tests/input/unresolved-variable.kubeka ...
 Checking for duplicates ... none
 Found 1 entrypoint nodes
 Node [circular-dependency-manual]: 1 errors, 0 warnings
+Linting complete.
 Found 1 errors and 0 warnings
 Found 2 nodes (1 runnable)
 ***** Return value: 1 *****

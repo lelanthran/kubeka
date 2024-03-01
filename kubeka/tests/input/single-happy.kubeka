@@ -1,0 +1,15 @@
+[job]
+ID = single-happy-1
+MESSAGE = No message
+EMITS = sig-single-happy-3
+
+[entrypoint]
+ID = single-happy-2
+MESSAGE = Still no message
+JOBS[] = [ single-happy-1 ]
+
+[job]
+ID = single-happy-3
+MESSAGE  = the handler for signals
+HANDLES = sig-single-happy-3
+EXEC = /bin/true && echo "Hello World"

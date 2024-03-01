@@ -1,6 +1,6 @@
 [job]
 ID = xor-failure-2.1
-MESSAGE = Contains EXEC and EMIT only
+MESSAGE = Contains EXEC and EMITS only
 EXEC = echo hello world
-EMIT = NEVER-EMITTED-SIGNAL
+EMITS = NEVER-EMITTED-SIGNAL
 

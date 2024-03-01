@@ -22,6 +22,7 @@ Processing 1 kubeka files
 Reading tests/input/duplicates.kubeka ...
 Checking for duplicates ... Found 1 duplicate in node list
 Found 0 entrypoint nodes
+Linting complete.
 Found 2 errors and 1 warnings
 Found 2 nodes (0 runnable)
 ***** Return value: 1 *****

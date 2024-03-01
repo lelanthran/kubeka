@@ -1,0 +1,13 @@
+[job]
+ID = single-fail-rollback-failure-1
+MESSAGE = No message
+ROLLBACK = /bin/false
+EXEC = /bin/false
+
+[entrypoint]
+ID = single-fail-rollback-failure-2
+MESSAGE = Still no message
+JOBS[] = [ single-fail-rollback-failure-1 ]
+
+
+

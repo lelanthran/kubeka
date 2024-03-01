@@ -24,7 +24,9 @@ typedef struct kbnode_t kbnode_t;
 #define KBNODE_KEY_MESSAGE    "MESSAGE"
 #define KBNODE_KEY_JOBS       "JOBS"
 #define KBNODE_KEY_EXEC       "EXEC"
-#define KBNODE_KEY_EMIT       "EMIT"
+#define KBNODE_KEY_EMITS      "EMITS"
+#define KBNODE_KEY_HANDLES    "HANDLES"
+#define KBNODE_KEY_ROLLBACK   "ROLLBACK"
 
 #ifdef __cplusplus
 extern "C" {
@@ -60,10 +62,10 @@ extern "C" {
 
    // Get the first value for the specified key. The caller must not free the
    // returned value.
-   const char *kbnode_getvalue_first (kbnode_t *node, const char *key);
+   const char *kbnode_getvalue_first (const kbnode_t *node, const char *key);
    // Get all the values for the specified key. The caller must not free the
    // returned array, nor any element of that array.
-   const char **kbnode_getvalue_all (kbnode_t *node, const char *key);
+   const char **kbnode_getvalue_all (const kbnode_t *node, const char *key);
 
    bool kbnode_set_single (kbnode_t *node, const char *key, size_t index,
                            char *newvalue);
@@ -88,6 +90,10 @@ extern "C" {
    // Return an array of nodes that have any of the keys specified in `keyname, ...`.
    // Note that the final parameter must be NULL.
    ds_array_t *kbnode_filter_keyname (ds_array_t *nodes, const char *keyname, ...);
+
+   // Return an array of nodes that handle the specified signals. Note that the
+   // final parameter must be NULL.
+   ds_array_t *kbnode_filter_handlers (ds_array_t *nodes, const char *sig, ...);
 
    // Instantiate and return the specified node `src`. The returned node will be a
    // tree which contains all child nodes as specified in the value of the `JOBS[]`

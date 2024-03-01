@@ -227,7 +227,7 @@ static kbnode_t *node_instantiate (const kbnode_t *src, kbnode_t *parent,
    const kbnode_t *ref = NULL;
 
    fprintf (stderr, "Instantiating [%s]\n",
-         kbsymtab_get_string(src->symtab, KBNODE_KEY_ID));
+         kbsymtab_get_string (src->symtab, KBNODE_KEY_ID));
    // 1. Create a new node (fname and line don't matter here, it will be set
    // below anyway during the cloning of the symbol table)
    kbnode_t *ret = node_new ("", 0, node_type_name (src->type), parent);
@@ -412,19 +412,21 @@ bool kbnode_get_srcdef (kbnode_t *node, const char **fname, size_t *line)
    return true;
 }
 
-const char *kbnode_getvalue_first (kbnode_t *node, const char *key)
+const char *kbnode_getvalue_first (const kbnode_t *node, const char *key)
 {
-   return node == NULL ? "" : kbsymtab_get_string (node->symtab, key);
+   const char *ret = node == NULL ? "" : kbsymtab_get_string (node->symtab, key);
+   return ret ? ret : "";
 }
 
-const char **kbnode_getvalue_all (kbnode_t *node, const char *key)
+const char **kbnode_getvalue_all (const kbnode_t *node, const char *key)
 {
    static const char *dummy[] = {
       "",
       NULL,
    };
 
-   return node == NULL ? dummy : kbsymtab_get (node->symtab, key);
+   const char **ret = node == NULL ? dummy : kbsymtab_get (node->symtab, key);
+   return ret ? ret : dummy;
 }
 
 bool kbnode_set_single (kbnode_t *node, const char *key, size_t index,
@@ -668,6 +670,23 @@ static bool node_filter_names (const void *element, void *param)
    return false;
 }
 
+static bool node_filter_handlers (const void *element, void *param)
+{
+   const kbnode_t *node = element;
+   const char **signals = param;
+
+   const char **handled_signals = kbnode_getvalue_all (node, KBNODE_KEY_HANDLES);
+
+   for (size_t i=0; signals && signals[i]; i++) {
+      for (size_t j=0; handled_signals[j]; j++) {
+         if ((strcmp (signals[i], handled_signals[j])) == 0) {
+            return true;
+         }
+      }
+   }
+   return false;
+}
+
 static char **collect_args (const char *a1, va_list ap)
 {
    char *tmp = (char *)a1;
@@ -729,11 +748,11 @@ void kbnode_check (kbnode_t *node, size_t *errors, size_t *warnings)
    // Possibly refactor this into a different function. For now this is fine
    // as we only have a single set of XOR keys to check
    int exec = kbsymtab_exists (node->symtab, KBNODE_KEY_EXEC) ? 1 : 0;
-   int emit = kbsymtab_exists (node->symtab, KBNODE_KEY_EMIT) ? 1 : 0;
+   int emit = kbsymtab_exists (node->symtab, KBNODE_KEY_EMITS) ? 1 : 0;
    int jobs = kbsymtab_exists (node->symtab, KBNODE_KEY_JOBS) ? 1 : 0;
    if ((exec + emit + jobs) != 1) {
       KBPARSE_ERROR (fname, line,
-               "Exactly one of EXEC, EMIT or JOBS must be specified\n");
+               "Exactly one of EXEC, EMITS or JOBS must be specified\n");
       INCPTR(*errors);
    }
 }
@@ -758,6 +777,16 @@ ds_array_t *kbnode_filter_keyname (ds_array_t *nodes, const char *keyname, ...)
    return ret;
 }
 
+ds_array_t *kbnode_filter_handlers (ds_array_t *nodes, const char *sig, ...)
+{
+   va_list ap;
+   va_start (ap, sig);
+   char **sigs = collect_args (sig, ap);
+   ds_array_t *ret = ds_array_filter (nodes, node_filter_handlers, sigs);
+   free (sigs);
+   return ret;
+}
+
 
 kbnode_t *kbnode_instantiate (const kbnode_t *src, ds_array_t *all,
                               size_t *errors, size_t *warnings)
@@ -774,10 +803,6 @@ kbnode_t *kbnode_instantiate (const kbnode_t *src, ds_array_t *all,
             "Failed to instantiate node\n");
       return NULL;
    }
-
-   // 1. Get a list of all the keys
-   // 2. Perform a substitution of each key with the value
-
 
    return ret;
 }

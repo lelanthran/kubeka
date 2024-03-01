@@ -45,13 +45,14 @@ Error in tests/input/circular-dependency.kubeka:1: Failed to instantiate child 0
 Error in tests/input/circular-dependency.kubeka:11: Failed to instantiate child 0 [circular-dependency-1]
 Error in tests/input/circular-dependency.kubeka:16: Failed to instantiate child 0 [circular-dependency-3]
 Error in tests/input/circular-dependency.kubeka:16: Failed to instantiate node
-src/kubeka.c:435 Internal error: Errors encountered during instantiation of node
-src/kubeka.c:438 Internal error: OOM storing new root node
+src/kubeka.c:458 Internal error: Errors encountered during instantiation of node
+src/kubeka.c:461 Internal error: OOM storing new root node
 Aborting due to 4 errors
 Processing 1 kubeka files
 Reading tests/input/circular-dependency.kubeka ...
 Checking for duplicates ... none
 Found 1 entrypoint nodes
+Linting complete.
 Found 4 errors and 0 warnings
 Found 4 nodes (0 runnable)
 ***** Return value: 1 *****
