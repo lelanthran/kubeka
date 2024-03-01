@@ -2,25 +2,15 @@
 
 . tests/manual/tests.inc
 
-export TESTSCRIPTS="\
-   test-broken.sh\
-   test-circular-dependency.sh\
-   test-unresolved-variable.sh\
-   test-duplicates.sh\
-   test-happy-cline.sh\
-   test-happy-environment-variables.sh\
-   test-happy-resolved-variable.sh\
-   test-mangled-input.sh\
-   test-missing-reference.sh\
-   test-missing-required.sh\
-   test-self-dependency.sh\
-   test-unknown-node-type.sh\
-   test-xor-failure-1.sh\
-   test-xor-failure-2.sh\
-   test-xor-failure-3.sh\
-"
-
 TESTDIR=`dirname $0`
+
+export TESTFILES="`ls -1 $TESTDIR/*.sh | grep -v test-all.sh | sort`"
+
+export TESTSCRIPTS=""
+
+for X in $TESTFILES; do
+   TESTSCRIPTS="$TESTSCRIPTS `basename $X`"
+done
 
 NFAILURES=0
 NPASSES=0
