@@ -10,9 +10,4 @@ Node []: 0 errors, 0 warnings
 Linting complete.
 Found 1 errors and 0 warnings
 Found 1 nodes (1 runnable)
-***** Return value: 1 *****
-Node [periodic] with parent [false]: 0x0
-   _FILENAME: tests/input/missing-required.kubeka
-   _LINE: 1
-   EXEC: /bin/true
-   MESSAGE: Missing required variables for node
+::EXITCODE:1

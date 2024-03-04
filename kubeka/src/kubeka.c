@@ -477,7 +477,7 @@ int main (int argc, char **argv)
       size_t errors = 0,
              warnings = 0;
 
-      kbtree_eval (root, &errors, &warnings);
+      kbtree_eval (root, dedup_nodes, &errors, &warnings);
       printf ("Node [%s]: %zu errors, %zu warnings\n",
                kbnode_getvalue_first (root, KBNODE_KEY_ID), errors, warnings);
       nerrors += errors;
@@ -564,8 +564,8 @@ int main (int argc, char **argv)
    // TODO: This must come out, not needed when everything is working
    ret = EXIT_SUCCESS;
 cleanup:
-   fprintf (stdout, "***** Return value: %i *****\n", ret);
-   ds_array_iterate (trees, (void (*) (void *, void*))kbnode_dump, stdout);
+   printf ("::EXITCODE:%i\n", ret);
+   // ds_array_iterate (trees, (void (*) (void *, void*))kbnode_dump, stdout);
    ds_array_fptr (paths, free);
    ds_array_fptr (files, free);
    ds_array_fptr (nodes, (void (*) (void *))kbnode_del);

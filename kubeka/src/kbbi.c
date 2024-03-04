@@ -106,6 +106,10 @@ static int kbbi_run (kbnode_t *node, ds_array_t *nodes,
       goto cleanup;
    }
 
+   printf ("::STARTING:%s:%s\n",
+            kbnode_getvalue_first (node, KBNODE_KEY_ID),
+            kbnode_getvalue_first (node, KBNODE_KEY_MESSAGE));
+
    if (s_emit && s_emit[0]) {
       ds_array_t *handler_nodes = kbnode_filter_handlers (nodes, s_emit, NULL);
       if (!handler_nodes) {
@@ -131,8 +135,8 @@ static int kbbi_run (kbnode_t *node, ds_array_t *nodes,
       char *result = NULL;
       size_t result_len = 0;
       ret = kbexec_shell (fname, line, s_exec, &result, &result_len);
-      KBERROR ("Executed [%s] with result [%s] %zu bytes\n",
-               s_exec, result, result_len);
+      printf ("::COMMAND:%s:%zu bytes\n-----\n%s\n-----\n",
+               s_exec, result_len, result);
       free (result);
       goto cleanup;
    }

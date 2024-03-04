@@ -12,16 +12,4 @@ Node [missing-reference-2]: 0 errors, 0 warnings
 Linting complete.
 Found 2 errors and 0 warnings
 Found 2 nodes (1 runnable)
-***** Return value: 1 *****
-Node [periodic] with parent [false]: 0x0
-   _FILENAME: tests/input/missing-reference.kubeka
-   JOBS: [ missing-reference-3 ,missing-reference-4 ,missing-reference-1 ]
-   _LINE: 6
-   MESSAGE: reference
-   ID: missing-reference-2
-Node [job] with parent [true]: 0x0
-   _FILENAME: tests/input/missing-reference.kubeka
-   _LINE: 1
-   EXEC: echo Hello World
-   MESSAGE: Missing reference
-   ID: missing-reference-1
+::EXITCODE:1

@@ -55,4 +55,4 @@ Found 1 entrypoint nodes
 Linting complete.
 Found 4 errors and 0 warnings
 Found 4 nodes (0 runnable)
-***** Return value: 1 *****
+::EXITCODE:1

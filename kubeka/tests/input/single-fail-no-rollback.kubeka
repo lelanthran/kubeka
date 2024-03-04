@@ -1,7 +1,7 @@
 [job]
 ID = single-fail-1
 MESSAGE = No message
-EXEC = /bin/false
+EXEC = echo "Failing on $(ID)" && /bin/false
 
 [entrypoint]
 ID = single-fail-2

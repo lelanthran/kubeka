@@ -12,18 +12,4 @@ Node [circular-dependency-manual]: 1 errors, 0 warnings
 Linting complete.
 Found 1 errors and 0 warnings
 Found 2 nodes (1 runnable)
-***** Return value: 1 *****
-Node [entrypoint] with parent [false]: 0x0
-   _FILENAME: tests/input/unresolved-variable.kubeka
-   CALLER_VAR: Set in caller
-   JOBS: unresolved-variable-1
-   _LINE: 7
-   MESSAGE: Starting node manually
-   ID: circular-dependency-manual
-Node [job] with parent [true]: 0x0
-   _FILENAME: tests/input/unresolved-variable.kubeka
-   SELF_VAR: Set in self
-   _LINE: 1
-   EXEC: echo "Checking for $(CALER_VAR)"
-   MESSAGE: circular-dependency-1
-   ID: unresolved-variable-1
+::EXITCODE:1

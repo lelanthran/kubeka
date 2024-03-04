@@ -3,6 +3,7 @@ Failed to open directory [tests/input/happy-cline.kubeka] for reading: No such f
 Processing 0 kubeka files
 Checking for duplicates ... none
 Found 0 entrypoint nodes
+Linting complete.
 Found 0 errors and 0 warnings
 Found 0 nodes (0 runnable)
-***** Return value: 0 *****
+::EXITCODE:0

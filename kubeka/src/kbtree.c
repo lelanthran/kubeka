@@ -218,7 +218,8 @@ static char *find_next_ref (const char *src, size_t *nerrors,
    return ret;
 }
 
-void kbtree_eval (kbnode_t *root, size_t *nerrors, size_t *nwarnings)
+void kbtree_eval (kbnode_t *root, ds_array_t *nodes,
+                  size_t *nerrors, size_t *nwarnings)
 {
    const char **keys = kbnode_keys (root);
    const char *fname;
@@ -236,13 +237,23 @@ void kbtree_eval (kbnode_t *root, size_t *nerrors, size_t *nwarnings)
       goto cleanup;
    }
 
-   // TODO: URGENT - ensure that signals created with EMITTED are in some
-   // nodes HANDLES variables. This requires that the caller passes a list
-   // of all the nodes.
-   //
-   //
    // If this has any EMITS values, then the corresponding HANDLES must
    // be found in a node somewhere.
+   const char **emits = kbnode_getvalue_all (root, KBNODE_KEY_EMITS);
+   for (size_t i=0; emits && emits[i]; i++) {
+      ds_array_t *node_handlers = kbnode_filter_handlers (nodes, emits[i], NULL);
+      if (!node_handlers) {
+         KBERROR ("Failed to generate list of handler nodes for signal [%s]\n",
+                  emits[i]);
+         goto cleanup;
+      }
+      size_t nnode_handlers = ds_array_length (node_handlers);
+      if (!nnode_handlers) {
+         KBPARSE_ERROR (fname, line, "Node emits signal [%s] which is unhandled\n",
+                  emits[i]);
+      }
+      ds_array_del (node_handlers);
+   }
 
    // for each $key in the symtab {
    //    for each $value in the array of values from $key {
@@ -308,7 +319,7 @@ void kbtree_eval (kbnode_t *root, size_t *nerrors, size_t *nwarnings)
    size_t nchildren = ds_array_length (children);
    for (size_t i=0; i<nchildren; i++) {
       kbnode_t *child = ds_array_get (children, i);
-      kbtree_eval (child, nerrors, nwarnings);
+      kbtree_eval (child, nodes, nerrors, nwarnings);
    }
 
 cleanup:

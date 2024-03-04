@@ -1,2 +1,2 @@
 src/kubeka.c:301 Internal error: Cannot specify more than one job to run
-***** Return value: 1 *****
+::EXITCODE:1

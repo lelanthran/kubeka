@@ -9,17 +9,4 @@ Node [single-fail-rollback-success-2]: 0 errors, 0 warnings
 Linting complete.
 Found 0 errors and 0 warnings
 Found 2 nodes (1 runnable)
-***** Return value: 0 *****
-Node [entrypoint] with parent [false]: 0x0
-   _FILENAME: tests/input/single-fail-rollback-success.kubeka
-   JOBS: single-fail-rollback-success-1
-   _LINE: 7
-   MESSAGE: Still no message
-   ID: single-fail-rollback-success-2
-Node [job] with parent [true]: 0x0
-   _FILENAME: tests/input/single-fail-rollback-success.kubeka
-   ROLLBACK: /bin/true
-   _LINE: 1
-   EXEC: /bin/false
-   MESSAGE: No message
-   ID: single-fail-rollback-success-1
+::EXITCODE:0
