@@ -1,14 +1,15 @@
 Failed to open directory [/etc/kubeka] for reading: No such file or directory
 Warning in tests/input/missing-required.kubeka:1: Missing required key 'ID'
-Instantiating []
-[src/kbtree.c:235] Error in kbtree_eval(): Failed to get node filename and line number information
-Aborting due to 1 error
+Instantiating [] as child of [NULL]
+[src/kbnode.c:172] Error in node_find_dependent_jobs(): Failed to get node information
+[src/kbtree.c:234] Error in kbtree_eval(): Failed to get node filename and line number information
+Aborting due to 2 errors
 Processing 1 kubeka files
 Reading tests/input/missing-required.kubeka ...
 Checking for duplicates ... none
 Found 1 entrypoint nodes
 Node []: 1 errors, 0 warnings
 Linting complete.
-Found 1 errors and 1 warnings
+Found 2 errors and 1 warnings
 Found 1 nodes (1 runnable)
 ::EXITCODE:1

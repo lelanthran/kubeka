@@ -38,7 +38,7 @@ static void dump_nodelist (ds_array_t *nodes, FILE *outf)
 {
    size_t nnodes = ds_array_length (nodes);
    for (size_t i=0; i<nnodes; i++) {
-      kbnode_dump ((kbnode_t *)ds_array_get (nodes, i), outf);
+      kbnode_dump ((kbnode_t *)ds_array_get (nodes, i), outf, 0);
    }
 }
 

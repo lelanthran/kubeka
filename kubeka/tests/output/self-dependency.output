@@ -1,45 +1,55 @@
 Failed to open directory [/etc/kubeka] for reading: No such file or directory
-Instantiating [self-dependency-manual]
-Instantiating [self-dependency-3]
-Checking [self-dependency-manual] for [self-dependency-2]
-Instantiating [self-dependency-2]
-Checking [self-dependency-3] for [self-dependency-2]
-Checking [self-dependency-manual] for [self-dependency-2]
-Instantiating [self-dependency-2]
-Checking [self-dependency-2] for [self-dependency-2]
+Instantiating [self-dependency-manual] as child of [NULL]
+Instantiating [self-dependency-3] as child of [self-dependency-manual]
+Checking [self-dependency-manual] for a parent with id [self-dependency-2]
+Instantiating [self-dependency-2] as child of [self-dependency-3]
+Checking [self-dependency-3] for a parent with id [self-dependency-2]
+Checking [self-dependency-manual] for a parent with id [self-dependency-2]
+Instantiating [self-dependency-2] as child of [self-dependency-2]
+Checking [self-dependency-2] for a parent with id [self-dependency-2]
 Error in tests/input/self-dependency.kubeka:6: Reference-cycle found. Node [self-dependency-2] recursively calls node [self-dependency-2]
 Node 1:
-Node [job] with parent [true]: 0x0
+Node [job] with parent [self-dependency-3]: 0x0
    _FILENAME: tests/input/self-dependency.kubeka
    JOBS: self-dependency-2
    _LINE: 6
    MESSAGE: self-dependency-2
    ID: self-dependency-2
-Node [job] with parent [true]: 0x0
-   _FILENAME: tests/input/self-dependency.kubeka
-   JOBS: self-dependency-2
-   _LINE: 6
-   MESSAGE: self-dependency-2
-   ID: self-dependency-2
+   njobs: 1
+   Node [job] with parent [self-dependency-2]: 0x0
+      _FILENAME: tests/input/self-dependency.kubeka
+      JOBS: self-dependency-2
+      _LINE: 6
+      MESSAGE: self-dependency-2
+      ID: self-dependency-2
+      njobs: 0
+      nhandlers: 0
+   nhandlers: 1
+NULL node object!
 Node 2:
-Node [job] with parent [true]: 0x0
+Node [job] with parent [self-dependency-3]: 0x0
    _FILENAME: tests/input/self-dependency.kubeka
    JOBS: self-dependency-2
    _LINE: 6
    MESSAGE: self-dependency-2
    ID: self-dependency-2
-Node [job] with parent [true]: 0x0
-   _FILENAME: tests/input/self-dependency.kubeka
-   JOBS: self-dependency-2
-   _LINE: 6
-   MESSAGE: self-dependency-2
-   ID: self-dependency-2
-Error in tests/input/self-dependency.kubeka:6: Failed to instantiate child 0 [self-dependency-2]
-Error in tests/input/self-dependency.kubeka:11: Failed to instantiate child 0 [self-dependency-2]
-Error in tests/input/self-dependency.kubeka:16: Failed to instantiate child 0 [self-dependency-3]
+   njobs: 1
+   Node [job] with parent [self-dependency-2]: 0x0
+      _FILENAME: tests/input/self-dependency.kubeka
+      JOBS: self-dependency-2
+      _LINE: 6
+      MESSAGE: self-dependency-2
+      ID: self-dependency-2
+      njobs: 0
+      nhandlers: 0
+   nhandlers: 1
+NULL node object!
+Error in tests/input/self-dependency.kubeka:6: Failed to instantiate job 0 [self-dependency-2]
+Error in tests/input/self-dependency.kubeka:11: Failed to instantiate job 0 [self-dependency-2]
+Error in tests/input/self-dependency.kubeka:16: Failed to instantiate job 0 [self-dependency-3]
 Error in tests/input/self-dependency.kubeka:16: Failed to instantiate node
-src/kubeka.c:458 Internal error: Errors encountered during instantiation of node
-src/kubeka.c:461 Internal error: OOM storing new root node
+src/kubeka.c:467 Internal error: Errors encountered during instantiation of node
+src/kubeka.c:470 Internal error: OOM storing new root node
 Aborting due to 4 errors
 Processing 1 kubeka files
 Reading tests/input/self-dependency.kubeka ...

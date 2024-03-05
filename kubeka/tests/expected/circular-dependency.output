@@ -1,52 +1,65 @@
 Failed to open directory [/etc/kubeka] for reading: No such file or directory
-Instantiating [circular-dependency-manual]
-Instantiating [circular-dependency-3]
-Checking [circular-dependency-manual] for [circular-dependency-1]
-Instantiating [circular-dependency-1]
-Checking [circular-dependency-3] for [circular-dependency-2]
-Checking [circular-dependency-manual] for [circular-dependency-2]
-Instantiating [circular-dependency-2]
-Checking [circular-dependency-1] for [circular-dependency-3]
-Checking [circular-dependency-3] for [circular-dependency-3]
+Instantiating [circular-dependency-manual] as child of [NULL]
+Instantiating [circular-dependency-3] as child of [circular-dependency-manual]
+Checking [circular-dependency-manual] for a parent with id [circular-dependency-1]
+Instantiating [circular-dependency-1] as child of [circular-dependency-3]
+Checking [circular-dependency-3] for a parent with id [circular-dependency-2]
+Checking [circular-dependency-manual] for a parent with id [circular-dependency-2]
+Instantiating [circular-dependency-2] as child of [circular-dependency-1]
+Checking [circular-dependency-1] for a parent with id [circular-dependency-3]
+Checking [circular-dependency-3] for a parent with id [circular-dependency-3]
 Error in tests/input/circular-dependency.kubeka:6: Reference-cycle found. Node [circular-dependency-2] recursively calls node [circular-dependency-3]
 Node 1:
-Node [job] with parent [true]: 0x0
+Node [job] with parent [circular-dependency-3]: 0x0
    _FILENAME: tests/input/circular-dependency.kubeka
    JOBS: circular-dependency-2
    _LINE: 1
    MESSAGE: circular-dependency-1
    ID: circular-dependency-1
-Node [job] with parent [true]: 0x0
-   _FILENAME: tests/input/circular-dependency.kubeka
-   JOBS: circular-dependency-3
-   _LINE: 6
-   MESSAGE: circular-dependency-2
-   ID: circular-dependency-2
+   njobs: 1
+   Node [job] with parent [circular-dependency-1]: 0x0
+      _FILENAME: tests/input/circular-dependency.kubeka
+      JOBS: circular-dependency-3
+      _LINE: 6
+      MESSAGE: circular-dependency-2
+      ID: circular-dependency-2
+      njobs: 0
+      nhandlers: 0
+   nhandlers: 1
+NULL node object!
 Node 2:
-Node [job] with parent [true]: 0x0
+Node [job] with parent [circular-dependency-manual]: 0x0
    _FILENAME: tests/input/circular-dependency.kubeka
    JOBS: circular-dependency-1
    _LINE: 11
    MESSAGE: reference
    ID: circular-dependency-3
-Node [job] with parent [true]: 0x0
-   _FILENAME: tests/input/circular-dependency.kubeka
-   JOBS: circular-dependency-2
-   _LINE: 1
-   MESSAGE: circular-dependency-1
-   ID: circular-dependency-1
-Node [job] with parent [true]: 0x0
-   _FILENAME: tests/input/circular-dependency.kubeka
-   JOBS: circular-dependency-3
-   _LINE: 6
-   MESSAGE: circular-dependency-2
-   ID: circular-dependency-2
-Error in tests/input/circular-dependency.kubeka:1: Failed to instantiate child 0 [circular-dependency-2]
-Error in tests/input/circular-dependency.kubeka:11: Failed to instantiate child 0 [circular-dependency-1]
-Error in tests/input/circular-dependency.kubeka:16: Failed to instantiate child 0 [circular-dependency-3]
+   njobs: 1
+   Node [job] with parent [circular-dependency-3]: 0x0
+      _FILENAME: tests/input/circular-dependency.kubeka
+      JOBS: circular-dependency-2
+      _LINE: 1
+      MESSAGE: circular-dependency-1
+      ID: circular-dependency-1
+      njobs: 1
+      Node [job] with parent [circular-dependency-1]: 0x0
+         _FILENAME: tests/input/circular-dependency.kubeka
+         JOBS: circular-dependency-3
+         _LINE: 6
+         MESSAGE: circular-dependency-2
+         ID: circular-dependency-2
+         njobs: 0
+         nhandlers: 0
+      nhandlers: 1
+NULL node object!
+   nhandlers: 1
+NULL node object!
+Error in tests/input/circular-dependency.kubeka:1: Failed to instantiate job 0 [circular-dependency-2]
+Error in tests/input/circular-dependency.kubeka:11: Failed to instantiate job 0 [circular-dependency-1]
+Error in tests/input/circular-dependency.kubeka:16: Failed to instantiate job 0 [circular-dependency-3]
 Error in tests/input/circular-dependency.kubeka:16: Failed to instantiate node
-src/kubeka.c:458 Internal error: Errors encountered during instantiation of node
-src/kubeka.c:461 Internal error: OOM storing new root node
+src/kubeka.c:467 Internal error: Errors encountered during instantiation of node
+src/kubeka.c:470 Internal error: OOM storing new root node
 Aborting due to 4 errors
 Processing 1 kubeka files
 Reading tests/input/circular-dependency.kubeka ...

@@ -105,12 +105,14 @@ struct kbsymtab_t {
    ds_hmap_t *table; // { char *: char ** }
 };
 
-void kbsymtab_dump (const kbsymtab_t *s, FILE *outf)
+void kbsymtab_dump (const kbsymtab_t *s, FILE *outf, size_t level)
 {
+#define INDENT    for (size_t i=0; i<(level * 3); i++) fputc (' ', outf)
    if (!outf)
       outf = stdout;
 
    if (!s) {
+      INDENT;
       fprintf (outf, "NULL kbsymtab_t object\n");
       return;
    }
@@ -134,12 +136,14 @@ void kbsymtab_dump (const kbsymtab_t *s, FILE *outf)
          KBERROR ("OOM trying to format array [%s]\n", keys[i]);
          goto cleanup;
       }
+      INDENT;
       fprintf (outf, "   %s: %s\n", keys[i], tmp);
    }
 
 cleanup:
    free (tmp);
    free (keys);
+#undef INDENT
 }
 
 

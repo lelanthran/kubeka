@@ -13,8 +13,7 @@ extern "C" {
 
    // Using the given node as the root of an instantiated tree, perform
    // all the variable substitutions.
-   void kbtree_eval (kbnode_t *root, ds_array_t *nodes,
-                     size_t *nerrors, size_t *nwarnings);
+   void kbtree_eval (kbnode_t *root, size_t *nerrors, size_t *nwarnings);
 
 
 

@@ -32,7 +32,7 @@ static void array_push (const void *node, size_t len, void *array)
    ds_array_t *a = array;
    if (!(ds_array_ins_tail (a, (void *)node))) {
       KBERROR ("Error inserting node into array (full node dump follows)\n");
-      kbnode_dump (node, stderr);
+      kbnode_dump (node, stderr, 0);
    }
 }
 
@@ -86,16 +86,16 @@ ds_array_t *kbtree_coalesce (ds_array_t *nodes, size_t *nduplicates,
          fprintf (stderr, "Node-2 found in [%s:%zu]\n",
                   node_src_fname, node_src_line);
          fprintf (stderr, "=== Node-1 dump follows: === \n");
-         kbnode_dump (existing, stderr);
+         kbnode_dump (existing, stderr, 0);
          fprintf (stderr, "=== Node-2 dump follows: === \n");
-         kbnode_dump (node, stderr);
+         kbnode_dump (node, stderr, 0);
          ndups++;
          *nerrors = (*nerrors) + 1;
       }
       int added = ds_set_add (set, node, 0);
       if (added < 0) {
          KBERROR ("Failed to add following node to set of all nodes\n");
-         kbnode_dump (node, stderr);
+         kbnode_dump (node, stderr, 0);
       }
       if (added == 0) {
          KBERROR ("Failed to add duplicated node\n");
@@ -223,8 +223,7 @@ static char *find_next_ref (const char *src, size_t *nerrors,
    return ret;
 }
 
-void kbtree_eval (kbnode_t *root, ds_array_t *nodes,
-                  size_t *nerrors, size_t *nwarnings)
+void kbtree_eval (kbnode_t *root, size_t *nerrors, size_t *nwarnings)
 {
    const char **keys = kbnode_keys (root);
    const char *fname;
@@ -243,30 +242,19 @@ void kbtree_eval (kbnode_t *root, ds_array_t *nodes,
       goto cleanup;
    }
 
-   // If this has any EMITS values, then the corresponding HANDLES must
-   // be found in a node somewhere. That node must likewise be evaluated.
-   const char **emits = kbnode_getvalue_all (root, KBNODE_KEY_EMITS);
-   for (size_t i=0; emits && emits[i]; i++) {
-      ds_array_t *node_handlers = kbnode_filter_handlers (nodes, emits[i], NULL);
-      if (!node_handlers) {
-         KBERROR ("Failed to generate list of handler nodes for signal [%s]\n",
-                  emits[i]);
-         goto cleanup;
-      }
-      size_t nnode_handlers = ds_array_length (node_handlers);
-      if (!nnode_handlers) {
-         KBPARSE_ERROR (fname, line, "Node emits signal [%s] which is unhandled\n",
-                  emits[i]);
-         INCPTR (*nerrors);
-         ds_array_del (node_handlers);
-         continue;
-      }
+   // Recursively evaluate all handlers and jobs attached to this node. Have to
+   // do this first because the current node would try to resolve symbols that
+   // may be present in the dependent nodes.
+   const ds_array_t *children = kbnode_handlers (root);
+   size_t nnodes = ds_array_length (children);
+   for (size_t i=0; i < nnodes; i++) {
+      kbtree_eval (ds_array_get (children, i), nerrors, nwarnings);
+   }
 
-      for (size_t j=0; j<nnode_handlers; j++) {
-         kbnode_t *handler_node = ds_array_get (node_handlers, j);
-         kbtree_eval (handler_node, nodes, nerrors, nwarnings);
-      }
-      ds_array_del (node_handlers);
+   children = kbnode_jobs (root);
+   nnodes = ds_array_length (children);
+   for (size_t i=0; i < nnodes; i++) {
+      kbtree_eval (ds_array_get (children, i), nerrors, nwarnings);
    }
 
    // for each $key in the symtab {
@@ -321,13 +309,6 @@ void kbtree_eval (kbnode_t *root, ds_array_t *nodes,
 
          kbnode_set_single (root, keys[i], j, newvalue);
       }
-   }
-
-   const ds_array_t *children = kbnode_children (root);
-   size_t nchildren = ds_array_length (children);
-   for (size_t i=0; i<nchildren; i++) {
-      kbnode_t *child = ds_array_get (children, i);
-      kbtree_eval (child, nodes, nerrors, nwarnings);
    }
 
 cleanup:

@@ -28,6 +28,8 @@ typedef struct kbnode_t kbnode_t;
 #define KBNODE_KEY_HANDLES    "HANDLES"
 #define KBNODE_KEY_ROLLBACK   "ROLLBACK"
 
+#define KBNODE_FLAG_INSTANTIATED    (1 >> 0)
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -40,16 +42,18 @@ extern "C" {
    void kbnode_flags_set (kbnode_t *node, uint64_t flags);
 
    // Write the node out to the file descriptor provided (used during development)
-   void kbnode_dump (const kbnode_t *node, FILE *outf);
+   void kbnode_dump (const kbnode_t *node, FILE *outf, size_t level);
 
    // Return an array of all the keys in a node. Caller must free the returned
    // array only, and not each element in the returned array.
    const char **kbnode_keys (const kbnode_t *node);
 
-   // Return all the children of a node.
-   const ds_array_t *kbnode_children (const kbnode_t *node);
+   // Return all the jobs/handlers of a node.
+   const ds_array_t *kbnode_jobs (const kbnode_t *node);
+   const ds_array_t *kbnode_handlers (const kbnode_t *node);
 
-   // Delete a node and all its children (only instantiated nodes have children).
+   // Delete a node and all its jobs and handlers (only instantiated nodes have
+   // jobs and handlers).
    void kbnode_del (kbnode_t *node);
 
    // Get the source filename and line number where this node was declared. On error
@@ -58,7 +62,7 @@ extern "C" {
    //
    // On success true is returned. On both success and failre the caller must not
    // free the `fname` that is set.
-   bool kbnode_get_srcdef (kbnode_t *node, const char **id, const char **fname,
+   bool kbnode_get_srcdef (const kbnode_t *node, const char **id, const char **fname,
                            size_t *line);
 
    // Get the first value for the specified key. The caller must not free the
@@ -86,15 +90,15 @@ extern "C" {
 
    // Return an array of nodes that match any of the types specified in `type, ...`.
    // Note that the final parameter must be NULL.
-   ds_array_t *kbnode_filter_types (ds_array_t *nodes, const char *type, ...);
+   ds_array_t *kbnode_filter_types (const ds_array_t *nodes, const char *type, ...);
 
    // Return an array of nodes that have any of the keys specified in `keyname, ...`.
    // Note that the final parameter must be NULL.
-   ds_array_t *kbnode_filter_keyname (ds_array_t *nodes, const char *keyname, ...);
+   ds_array_t *kbnode_filter_keyname (const ds_array_t *nodes, const char *keyname, ...);
 
    // Return an array of nodes that handle the specified signals. Note that the
    // final parameter must be NULL.
-   ds_array_t *kbnode_filter_handlers (ds_array_t *nodes, const char *sig, ...);
+   ds_array_t *kbnode_filter_handlers (const ds_array_t *nodes, const char **signals);
 
    // Instantiate and return the specified node `src`. The returned node will be a
    // tree which contains all child nodes as specified in the value of the `JOBS[]`

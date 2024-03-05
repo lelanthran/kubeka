@@ -1,8 +1,11 @@
+# This node will warn about no rollback command being found
 [job]
 ID = single-fail-no-rollback-1
 MESSAGE = Executing shell command
 EXEC = echo "Failing on $<ID>" && /bin/false
 
+# This node will *NOT* warn about no rollback command, because rollbacks are
+# only performed if EXEC fails.
 [entrypoint]
 ID = single-fail-no-rollback-2
 MESSAGE = Entrypoint node

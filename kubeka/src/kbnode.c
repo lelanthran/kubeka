@@ -40,6 +40,12 @@
  * Node functions
  */
 
+enum childtype_t {
+   childtype_NONE = 0,
+   childtype_JOB,
+   childtype_HANDLER,
+};
+
 enum node_type_t {
    node_type_UNKNOWN = 0,
    node_type_PERIODIC,
@@ -85,23 +91,35 @@ struct kbnode_t {
    enum node_type_t type;
    kbsymtab_t *symtab;
    kbnode_t *parent;
-   ds_array_t *children;
+   ds_array_t *jobs;
+   ds_array_t *handlers;
    uint64_t flags;
 };
 
-static size_t node_find_child (kbnode_t *node, kbnode_t *child)
+static size_t find_node (ds_array_t *nodelist, kbnode_t *node)
 {
-   if (!node || !child) {
+   if (!nodelist || !node) {
       return (size_t)-1;
    }
-   size_t nchildren = ds_array_length (node->children);
-   for (size_t i=0; i<nchildren; i++) {
-      if ((ds_array_get (node->children, i)) == child) {
+   size_t nnodes = ds_array_length (nodelist);
+   for (size_t i=0; i<nnodes; i++) {
+      if ((ds_array_get (nodelist, i)) == node) {
          return i;
       }
    }
    return (size_t)-1;
 }
+
+static size_t node_find_job (kbnode_t *node, kbnode_t *job)
+{
+   return node ? find_node (node->jobs, job) : (size_t)-1;
+}
+
+static size_t node_find_handler (kbnode_t *node, kbnode_t *handler)
+{
+   return node ? find_node (node->handlers, handler) : (size_t)-1;
+}
+
 
 static const kbnode_t *node_findbyid (ds_array_t *all, const char *id)
 {
@@ -121,7 +139,7 @@ static const kbnode_t *node_findparent (const kbnode_t *node, const char *id)
    if (!node)
       return NULL;
 
-   fprintf (stderr, "Checking [%s] for [%s]\n",
+   fprintf (stderr, "Checking [%s] for a parent with id [%s]\n",
             kbsymtab_get_string (node->symtab, KBNODE_KEY_ID),
             id);
    if ((strcmp (kbsymtab_get_string (node->symtab, KBNODE_KEY_ID), id)) == 0) {
@@ -131,32 +149,145 @@ static const kbnode_t *node_findparent (const kbnode_t *node, const char *id)
    return node_findparent (node->parent, id);
 }
 
-static void node_del (kbnode_t **node)
+struct djobs_t {
+   enum childtype_t childtype;
+   const char *id;
+};
+
+static struct djobs_t *node_find_dependent_jobs (const kbnode_t *node,
+                                                 ds_array_t *all,
+                                                 size_t *nerrors)
 {
-   if (!node || !*node)
+   if (!node || !all) {
+      return NULL;
+   }
+
+   bool error = true;
+   const char *fname = NULL, *id = NULL;
+   size_t line = 0;
+   struct djobs_t *ret = NULL;
+
+   if (!(kbnode_get_srcdef (node, &id, &fname, &line))) {
+      INCPTR (*nerrors);
+      KBERROR ("Failed to get node information\n");
+      return NULL;
+   }
+
+   const char **jobs = kbsymtab_get (node->symtab, KBNODE_KEY_JOBS);
+   const char **signals = kbsymtab_get (node->symtab, KBNODE_KEY_EMITS);
+
+   // Doing it using a filter might miss the fact that some of the signals
+   // don't have handlers. Have to search for a handler for each individual
+   // signal ensures that every emitted signal has at least one handler
+   ds_array_t *handlers = ds_array_new ();
+   if (!handlers) {
+      KBERROR ("OOM allocating new array\n");
+      INCPTR (*nerrors);
+      goto cleanup;
+   }
+
+   size_t njobs = kbutil_strarray_length (jobs);
+   size_t nstrings = kbutil_strarray_length (signals) + njobs;
+   if (!(ret = calloc (nstrings +1, sizeof *ret))) {
+      INCPTR (*nerrors);
+      goto cleanup;
+   }
+   // Store the result of jobs search (easy)
+   size_t idx = 0;
+   for (size_t i=0; i < njobs; i++) {
+      ret[idx].id = jobs[i];
+      ret[idx].childtype = childtype_JOB;
+      idx++;
+   }
+
+   // For each signal, find all the nodes that handle that signal
+   for (size_t i=0; signals && signals[i]; i++) {
+      const char *sigs[] = {
+         signals[i],
+         NULL,
+      };
+
+      ds_array_t *sighandlers = kbnode_filter_handlers (all, sigs);
+      if (!sighandlers) {
+         KBERROR ("OOM filtering signals into array\n");
+         INCPTR (*nerrors);
+         goto cleanup;
+      }
+      size_t nsighandlers = ds_array_length (sighandlers);
+      if (!nsighandlers) {
+         KBPARSE_ERROR (fname, line, "Node [%s] signal [%s] is unhandled\n",
+                  id, signals[i]);
+         INCPTR (*nerrors);
+         goto cleanup;
+      }
+
+      for (size_t j=0; j<nsighandlers; j++) {
+         if (!(ds_array_ins_tail (handlers, ds_array_get (sighandlers, j)))) {
+            KBERROR ("OOM inserting signal handler node into handlers\n");
+            INCPTR (*nerrors);
+            goto cleanup;
+         }
+      }
+      ds_array_del (sighandlers);
+   }
+
+   size_t nhandlers = ds_array_length (handlers);
+
+   // For each handler, store its ID and childtype
+   for (size_t i=0; i<nhandlers; i++) {
+      kbnode_t *handler = ds_array_get (handlers, i);
+      const char *id = kbnode_getvalue_first (handler, KBNODE_KEY_ID);
+      if (!id) {
+         INCPTR (*nerrors);
+         goto cleanup;
+      }
+      ret[idx].id = id;
+      ret[idx].childtype = childtype_HANDLER;
+      idx++;
+   }
+
+   error = false;
+
+cleanup:
+   ds_array_del (handlers);
+   if (error) {
+      free (ret);
+      ret = NULL;
+   }
+   return ret;
+}
+
+static void node_del (kbnode_t *node)
+{
+   if (!node)
       return;
 
-   // Remove this node from parent's list of children
-   size_t me = node_find_child ((*node)->parent, *node);
-   if (me != (size_t)-1) {
-      ds_array_rm ((*node)->parent->children, me);
+   // Remove this node from parent's list of jobs and handlers
+   if (node->parent) {
+      size_t me = -1;
+      if ((me = node_find_job (node->parent, node)) != (size_t)-1) {
+         ds_array_rm (node->parent->jobs, me);
+      }
+      if ((me = node_find_handler (node->parent, node)) != (size_t)-1) {
+         ds_array_rm (node->parent->jobs, me);
+      }
    }
 
-   // Recursively delete all children
-   for (size_t i=0; i<ds_array_length ((*node)->children); i++) {
-      kbnode_t *child = ds_array_get ((*node)->children, i);
-      node_del (&child);
-   }
-   ds_array_del ((*node)->children);
+   // Recursively delete all jobs and handlers
+   ds_array_fptr (node->jobs, (void (*) (void *))node_del);
+   ds_array_fptr (node->handlers, (void (*) (void *))node_del);
+   ds_array_del (node->jobs);
+   ds_array_del (node->handlers);
 
    // Clear out the symbol table
-   kbsymtab_del ((*node)->symtab);
+   kbsymtab_del (node->symtab);
 
-   free (*node);
+   free (node);
 }
 
 static kbnode_t *node_new (const char *fname, size_t line,
-                           const char *typename, kbnode_t *parent)
+                           const char *typename,
+                           kbnode_t *parent, enum childtype_t childtype)
 {
    bool error = true;
    enum node_type_t type = node_type_type (typename);
@@ -188,13 +319,27 @@ static kbnode_t *node_new (const char *fname, size_t line,
       goto cleanup;
    }
 
-   if (!(ret->children = ds_array_new ())) {
+   if (!(ret->jobs = ds_array_new ()) || !(ret->handlers = ds_array_new ())) {
       goto cleanup;
    }
 
+   // Attach to parent, if a parent is specified.
    if (parent) {
       ret->parent = parent;
-      if (!(ds_array_ins_tail (parent->children, ret))) {
+      void *inserted = NULL;
+      switch (childtype) {
+         case childtype_JOB:
+            inserted = ds_array_ins_tail (parent->jobs, ret);
+            break;
+
+         case childtype_HANDLER:
+            inserted = ds_array_ins_tail (parent->handlers, ret);
+            break;
+
+         case childtype_NONE:
+            break;
+      }
+      if (!inserted) {
          goto cleanup;
       }
    }
@@ -203,7 +348,7 @@ static kbnode_t *node_new (const char *fname, size_t line,
    error = false;
 cleanup:
    if (error) {
-      node_del (&ret);
+      node_del (ret);
    }
    return ret;
 }
@@ -218,20 +363,22 @@ static int64_t node_line (const kbnode_t *node)
    return kbsymtab_get_int (node->symtab, KBNODE_KEY_LINE);
 }
 
-static kbnode_t *node_instantiate (const kbnode_t *src, kbnode_t *parent,
+static kbnode_t *node_instantiate (const kbnode_t *src,
+                                   kbnode_t *parent, enum childtype_t childtype,
                                    ds_array_t *all,
                                    size_t *errors, size_t *warnings)
 {
    bool error = true;
-   const char **jobs = NULL;
+   struct djobs_t *jobs = NULL;
    const kbnode_t *ref = NULL;
 
-   fprintf (stderr, "Instantiating [%s]\n",
-         kbsymtab_get_string (src->symtab, KBNODE_KEY_ID));
+   fprintf (stderr, "Instantiating [%s] as child of [%s]\n",
+         kbsymtab_get_string (src->symtab, KBNODE_KEY_ID),
+         parent ? kbnode_getvalue_first (parent, KBNODE_KEY_ID) : "NULL");
 
    // 1. Create a new node (fname and line don't matter here, it will be set
    // below anyway during the cloning of the symbol table)
-   kbnode_t *ret = node_new ("", 0, node_type_name (src->type), parent);
+   kbnode_t *ret = node_new ("", 0, node_type_name (src->type), parent, childtype);
 
    // 2. Copy the symbol table (easier to just recreate it)
    kbsymtab_del (ret->symtab);
@@ -241,52 +388,55 @@ static kbnode_t *node_instantiate (const kbnode_t *src, kbnode_t *parent,
       goto cleanup;
    }
 
-   // 3, Find all the children
-   if (!(jobs = kbsymtab_get (src->symtab, KBNODE_KEY_JOBS))) {
-      // No JOBS[] to create children from, ignore
+   // 3, Find all the references to jobs and handlers
+   if (!(jobs = node_find_dependent_jobs (src, all, errors))) {
+      // No JOBS[] to create jobs from, no signals to emit, so nothing to do.
       error = false;
       goto cleanup;
    }
 
-   // 4. Recursively create all children
-   for (size_t i=0; jobs && jobs[i]; i++) {
+   // 4. Recursively create all jobs
+   for (size_t i=0; jobs && jobs[i].id && jobs[i].childtype; i++) {
 
-      if (!(ref = node_findbyid (all, jobs[i]))) {
+      if (!(ref = node_findbyid (all, jobs[i].id))) {
          KBPARSE_ERROR (node_filename (src), node_line (src),
-               "Failed to find reference to job [%s]\n", jobs[i]);
+               "Failed to find reference to job [%s]\n", jobs[i].id);
          INCPTR (*errors);
          continue;
       }
 
-      // If the child node is also an ancestor, then we give up - nodes
+      // If the job node is also an ancestor, then we give up - nodes
       // cannot reference each other recursively.
-      const kbnode_t *ancestor = node_findparent (parent, jobs[i]);
+      const kbnode_t *ancestor = node_findparent (parent, jobs[i].id);
       if (ancestor) {
          KBPARSE_ERROR (node_filename (src), node_line (src),
                "Reference-cycle found. Node [%s] recursively calls node [%s]\n",
                kbsymtab_get_string (src->symtab, KBNODE_KEY_ID),
                kbsymtab_get_string (ancestor->symtab, KBNODE_KEY_ID));
          fprintf (stderr, "Node 1:\n");
-         kbnode_dump (parent, stderr);
+         kbnode_dump (parent, stderr, 0);
          fprintf (stderr, "Node 2:\n");
-         kbnode_dump (ancestor, stderr);
+         kbnode_dump (ancestor, stderr, 0);
          INCPTR(*errors);
          goto cleanup;
       }
 
-      if (!(node_instantiate (ref, ret, all, errors, warnings))) {
+      if (!(node_instantiate (ref, ret, jobs[i].childtype, all, errors, warnings))) {
          KBPARSE_ERROR (node_filename (src), node_line (src),
-                  "Failed to instantiate child %zu [%s]\n", i, jobs[i]);
+                  "Failed to instantiate job %zu [%s]\n", i, jobs[i].id);
          INCPTR (*errors);
          goto cleanup;
       }
    }
 
+   ret->flags |= KBNODE_FLAG_INSTANTIATED;
+
    error = false;
 
 cleanup:
+   free (jobs);
    if (error) {
-      node_del (&ret);
+      node_del (ret);
       ret = NULL;
    }
 
@@ -359,8 +509,9 @@ void kbnode_flags_set (kbnode_t *node, uint64_t flags)
    node->flags = flags;
 }
 
-void kbnode_dump (const kbnode_t *node, FILE *outf)
+void kbnode_dump (const kbnode_t *node, FILE *outf, size_t level)
 {
+#define INDENT(l)    for (size_t i=0; i<((l) * 3); i++) fputc (' ', outf)
    if (!outf)
       outf = stdout;
    if (!node) {
@@ -368,20 +519,37 @@ void kbnode_dump (const kbnode_t *node, FILE *outf)
       return;
    }
 
+   INDENT (level);
    fprintf (outf, "Node [%s] with parent [%s]: 0x%" PRIx64 "\n",
-         node_type_name(node->type), node->parent ? "true" : "false", node->flags);
+         node_type_name (node->type),
+         node->parent ? kbnode_getvalue_first (node->parent, KBNODE_KEY_ID) : "null",
+         node->flags);
 
-   kbsymtab_dump (node->symtab, outf);
+   kbsymtab_dump (node->symtab, outf, level);
 
-   size_t nchildren = ds_array_length (node->children);
+   size_t nchildren = ds_array_length (node->jobs);
+   INDENT (level + 1);
+   fprintf (outf, "njobs: %zu\n", nchildren);
    for (size_t i=0; i<nchildren; i++) {
-      kbnode_dump ((kbnode_t *)(ds_array_get (node->children, i)), outf);
+      kbnode_dump ((kbnode_t *)(ds_array_get (node->jobs, i)), outf, level + 1);
    }
+   nchildren = ds_array_length (node->jobs);
+   INDENT (level + 1);
+   fprintf (outf, "nhandlers: %zu\n", nchildren);
+   for (size_t i=0; i<nchildren; i++) {
+      kbnode_dump ((kbnode_t *)(ds_array_get (node->handlers, i)), outf, level + 1);
+   }
+#undef INDENT
 }
 
-const ds_array_t *kbnode_children (const kbnode_t *node)
+const ds_array_t *kbnode_jobs (const kbnode_t *node)
 {
-   return node ? node->children : NULL;
+   return node ? node->jobs : NULL;
+}
+
+const ds_array_t *kbnode_handlers (const kbnode_t *node)
+{
+   return node ? node->handlers : NULL;
 }
 
 const char **kbnode_keys (const kbnode_t *node)
@@ -391,10 +559,10 @@ const char **kbnode_keys (const kbnode_t *node)
 
 void kbnode_del (kbnode_t *node)
 {
-   node_del (&node);
+   node_del (node);
 }
 
-bool kbnode_get_srcdef (kbnode_t *node, const char **id, const char **fname,
+bool kbnode_get_srcdef (const kbnode_t *node, const char **id, const char **fname,
                         size_t *line)
 {
    *line = 0;
@@ -539,7 +707,7 @@ bool kbnode_read_file (ds_array_t *dst, const char *fname,
          }
          *tmp = 0;
 
-         if (!(current = node_new (fname, lc, &line[1], NULL))) {
+         if (!(current = node_new (fname, lc, &line[1], NULL, childtype_NONE))) {
             KBPARSE_ERROR (fname, lc,
                   "Node creation attempt failure near: '%s'\n", &line[1]);
             *nerrors = (*nerrors) + 1;
@@ -767,7 +935,7 @@ void kbnode_check (kbnode_t *node, size_t *errors, size_t *warnings)
    }
 }
 
-ds_array_t *kbnode_filter_types (ds_array_t *nodes, const char *type, ...)
+ds_array_t *kbnode_filter_types (const ds_array_t *nodes, const char *type, ...)
 {
    va_list ap;
    va_start (ap, type);
@@ -777,7 +945,7 @@ ds_array_t *kbnode_filter_types (ds_array_t *nodes, const char *type, ...)
    return ret;
 }
 
-ds_array_t *kbnode_filter_keyname (ds_array_t *nodes, const char *keyname, ...)
+ds_array_t *kbnode_filter_keyname (const ds_array_t *nodes, const char *keyname, ...)
 {
    va_list ap;
    va_start (ap, keyname);
@@ -787,14 +955,9 @@ ds_array_t *kbnode_filter_keyname (ds_array_t *nodes, const char *keyname, ...)
    return ret;
 }
 
-ds_array_t *kbnode_filter_handlers (ds_array_t *nodes, const char *sig, ...)
+ds_array_t *kbnode_filter_handlers (const ds_array_t *nodes, const char **signals)
 {
-   va_list ap;
-   va_start (ap, sig);
-   char **sigs = collect_args (sig, ap);
-   ds_array_t *ret = ds_array_filter (nodes, node_filter_handlers, sigs);
-   free (sigs);
-   return ret;
+   return ds_array_filter (nodes, node_filter_handlers, signals);
 }
 
 
@@ -807,7 +970,8 @@ kbnode_t *kbnode_instantiate (const kbnode_t *src, ds_array_t *all,
       return NULL;
    }
 
-   kbnode_t *ret = node_instantiate (src, NULL, all, errors, warnings);
+   kbnode_t *ret = node_instantiate (src, NULL, childtype_NONE,
+                                     all, errors, warnings);
    if (!ret) {
       KBPARSE_ERROR (node_filename (src), node_line (src),
             "Failed to instantiate node\n");

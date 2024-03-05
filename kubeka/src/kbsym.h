@@ -8,7 +8,7 @@ typedef struct kbsymtab_t kbsymtab_t;
 extern "C" {
 #endif
 
-   void kbsymtab_dump (const kbsymtab_t *s, FILE *outf);
+   void kbsymtab_dump (const kbsymtab_t *s, FILE *outf, size_t level);
 
    kbsymtab_t *kbsymtab_new (void);
 

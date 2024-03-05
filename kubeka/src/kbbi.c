@@ -46,7 +46,7 @@ kbbi_fptr_t *kbbi_fptr (const char *name)
    return NULL;
 }
 
-static kbnode_t *find_node (const char *node_id, ds_array_t *nodes)
+static kbnode_t *find_node (const char *node_id, const ds_array_t *nodes)
 {
    size_t nnodes = ds_array_length (nodes);
    for (size_t i=0; i<nnodes; i++) {
@@ -72,29 +72,42 @@ static bool kbbi_rollback (kbnode_t *node, size_t *nerrors, size_t *nwarnings)
    }
 
    const char **actions = kbnode_getvalue_all (node, KBNODE_KEY_ROLLBACK);
-   if (!actions || !actions[0]) {
+   if (!actions || !actions[0] || !actions[0][0]) {
       INCPTR (*nwarnings);
       KBPARSE_ERROR (fname, line, "No rollback actions found for node [%s]\n", id);
       return true;
    }
 
+   KBPARSE_ERROR (fname, line,
+         "Attempting ROLLBACK on node [%s] (%zu rollback actions found)\n",
+         id, kbutil_strarray_length (actions));
    for (size_t i=0; actions[i]; i++) {
-      // TODO: Exec action and capture stdout and return value
+      char *result = NULL;
+      size_t result_len = 0;
+      int rc = kbexec_shell (fname, line, actions[i], &result, &result_len);
+      printf ("::ROLLBACK:%s:%i:%zu bytes\n-----\n%s\n-----\n",
+               actions[i], rc, result_len, result);
+      if (rc) {
+         KBPARSE_ERROR (fname, line, "Node [%s] failed to rollback\n", id);
+      }
+
+      free (result);
    }
    return true;
 }
 
-static int kbbi_run (kbnode_t *node, ds_array_t *nodes,
-                     size_t *nerrors, size_t *nwarnings)
+static int kbbi_run (kbnode_t *node, size_t *nerrors, size_t *nwarnings)
 {
    int ret = EXIT_FAILURE;
-   const char *id = kbnode_getvalue_first (node, KBNODE_KEY_ID);
    const char *s_message = kbnode_getvalue_first (node, KBNODE_KEY_MESSAGE);
+   const char *id = NULL;
    const char *fname = NULL;
    size_t line = 0;
-   const char **s_jobs = kbnode_getvalue_all (node, KBNODE_KEY_JOBS);
-   const char *s_exec = kbnode_getvalue_first (node, KBNODE_KEY_EXEC);
-   const char *s_emit = kbnode_getvalue_first (node, KBNODE_KEY_EMITS);
+   const char **s_exec = kbnode_getvalue_all (node, KBNODE_KEY_EXEC);
+   const char **signals = kbnode_getvalue_all (node, KBNODE_KEY_EMITS);
+
+
+   bool done = false;
 
    if (!(kbnode_get_srcdef (node, &id, &fname, &line))) {
       KBERROR ("Node has no source file information\n");
@@ -104,67 +117,76 @@ static int kbbi_run (kbnode_t *node, ds_array_t *nodes,
 
    printf ("::STARTING:%s:%s\n", id, s_message);
 
-   if (s_emit && s_emit[0]) {
-      ds_array_t *handler_nodes = kbnode_filter_handlers (nodes, s_emit, NULL);
-      if (!handler_nodes) {
-         KBERROR ("OOM allocating handlers list\n");
-         goto cleanup;
-      }
-      size_t nhandler_nodes = ds_array_length (handler_nodes);
-      if (!nhandler_nodes) {
-         KBPARSE_ERROR (fname, line, "Failed to find any handlers for node\n");
-         ds_array_del (handler_nodes);
-         goto cleanup;
-      }
+
+   // Execute all the handlers (should this be first?)
+   ds_array_t *handler_nodes = kbnode_filter_handlers (kbnode_handlers (node),
+                                                       signals);
+   size_t nnodes = ds_array_length (handler_nodes);
+   if (!handler_nodes) {
+      KBERROR ("OOM allocating handlers list\n");
+      INCPTR (*nerrors);
+      goto cleanup;
+   } else {
       ret = 0;
-      for (size_t i=0; i<nhandler_nodes; i++) {
-         kbnode_t *handler_node = ds_array_get (handler_nodes, i);
-         ret += kbbi_run (handler_node, nodes, nerrors, nwarnings);
-      }
-      ds_array_del (handler_nodes);
-      return ret;
    }
 
-   if (s_exec && s_exec[0]) {
-      char *result = NULL;
-      size_t result_len = 0;
-      ret = kbexec_shell (fname, line, s_exec, &result, &result_len);
-      printf ("::COMMAND:%s:%zu bytes\n-----\n%s\n-----\n",
-               s_exec, result_len, result);
-      free (result);
+   for (size_t i=0; i < nnodes; i++) {
+      kbnode_t *handler_node = ds_array_get (handler_nodes, i);
+      ret += kbbi_run (handler_node, nerrors, nwarnings);
+      done = true;
+   }
+   ds_array_del (handler_nodes);
+   if (done) {
       goto cleanup;
    }
 
-   if (s_jobs && s_jobs[0]) {
-      for (size_t i=0; s_jobs[i]; i++) {
-         kbnode_t *node = find_node (s_jobs[i], nodes);
-         if (!node) {
-            INCPTR (*nerrors);
-            KBPARSE_ERROR (fname, line, "Cannot find child [%s]\n", s_jobs[i]);
-            goto cleanup;
-         }
-         if ((kbbi_run (node, nodes, nerrors, nwarnings)) != EXIT_SUCCESS) {
-            INCPTR (*nwarnings);
-            KBPARSE_ERROR (fname, line, "Child failure [%s]: Attempting rollback\n",
-                  s_jobs[i]);
-            for (size_t j=i; j>0; j--) {
-               kbnode_t *node = find_node (s_jobs[j], nodes);
-               if (!(kbbi_rollback (node, nerrors, nwarnings))) {
-                  INCPTR (*nerrors);
-                  KBPARSE_ERROR (fname, line, "Rollback failure in child [%s]\n",
-                        s_jobs[j]);
-               }
-            }
-            if (!(kbbi_rollback (find_node (s_jobs[0], nodes),
-                                            nerrors, nwarnings))) {
+
+   // Execute all the EXEC statements
+   for (size_t i=0; s_exec && s_exec[i] && s_exec[i][0]; i++) {
+      char *result = NULL;
+      size_t result_len = 0;
+      ret |= kbexec_shell (fname, line, s_exec[i], &result, &result_len);
+      printf ("::COMMAND:%s:%i:%zu bytes\n-----\n%s\n-----\n",
+               s_exec[i], ret, result_len, result);
+      free (result);
+      done = true;
+   }
+   if (done) {
+      goto cleanup;
+   }
+
+
+   // Execute all the jobs
+   const ds_array_t *jobs = kbnode_jobs (node);
+   nnodes = ds_array_length (jobs);
+
+   for (size_t i=0; i < nnodes; i++) {
+      kbnode_t *job = ds_array_get (jobs, i);
+      if ((ret = kbbi_run (job, nerrors, nwarnings)) != EXIT_SUCCESS) {
+         const char *fname = NULL, *id = NULL;
+         size_t line = 0;
+         kbnode_get_srcdef (job, &id, &fname, &line);
+         KBPARSE_ERROR (fname, line, "Error executing job[%s]:\n", id);
+         kbnode_dump (job, stderr, 0);
+         INCPTR (*nwarnings);
+         for (size_t j=i; j>0; j--) {
+            kbnode_t *rbnode = ds_array_get (jobs, j);
+            if (!(kbbi_rollback (rbnode, nerrors, nwarnings))) {
                INCPTR (*nerrors);
-               KBPARSE_ERROR (fname, line, "Rollback failure in child [%s]\n",
-                     s_jobs[0]);
+               KBPARSE_ERROR (fname, line, "Rollback failure in child:\n");
+               kbnode_dump (rbnode, stderr, 1);
             }
-            goto cleanup;
          }
+         if (!(kbbi_rollback (ds_array_get (jobs, 0), nerrors, nwarnings))) {
+            INCPTR (*nerrors);
+            KBPARSE_ERROR (fname, line, "Rollback failure in child:\n");
+            kbnode_dump (ds_array_get (jobs, 0), stderr, 1);
+         }
+         goto cleanup;
       }
-      ret = EXIT_SUCCESS;
+      done = true;
+   }
+   if (done) {
       goto cleanup;
    }
 
@@ -175,7 +197,7 @@ cleanup:
    if (ret != EXIT_SUCCESS) {
       KBPARSE_ERROR (fname, line,
                "Failed to run node [%s]. Full node follows:\n", id);
-      kbnode_dump (node, stderr);
+      kbnode_dump (node, stderr, 0);
    }
 
    return ret;
@@ -191,7 +213,7 @@ int kbbi_launch (const char *node_id, ds_array_t *nodes,
       return EXIT_FAILURE;
    }
 
-   return kbbi_run (target, nodes, nerrors, nwarnings);
+   return kbbi_run (target, nerrors, nwarnings);
 }
 
 

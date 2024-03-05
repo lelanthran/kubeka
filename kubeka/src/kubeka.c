@@ -221,6 +221,14 @@ static ds_array_t *process_paths (ds_array_t *dirs)
    return files;
 }
 
+#if 0
+static void dumpnode (const void *param_node, void *param_file)
+{
+   const kbnode_t *node = param_node;
+   FILE *outf = param_file;
+   kbnode_dump (node, outf, 0);
+}
+#endif
 
 int main (int argc, char **argv)
 {
@@ -400,12 +408,13 @@ int main (int argc, char **argv)
    size_t ndups = 0;
    warnings = 0;
    errors = 0;
+
+   printf ("Checking for duplicates ... ");
    if (!(dedup_nodes = kbtree_coalesce (nodes, &ndups, &errors, &warnings))) {
       ERROR ("Internal error, aborting\n");
       goto cleanup;
    }
 
-   printf ("Checking for duplicates ... ");
    if (ndups) {
       printf ("Found %zu duplicate%s in node list\n", ndups, ndups ? "" : "s");
       nerrors += ndups;
@@ -477,7 +486,7 @@ int main (int argc, char **argv)
       size_t errors = 0,
              warnings = 0;
 
-      kbtree_eval (root, dedup_nodes, &errors, &warnings);
+      kbtree_eval (root, &errors, &warnings);
       printf ("Node [%s]: %zu errors, %zu warnings\n",
                kbnode_getvalue_first (root, KBNODE_KEY_ID), errors, warnings);
       nerrors += errors;
@@ -532,7 +541,7 @@ int main (int argc, char **argv)
    // If an entrypoint is specified, run it then exit.
    if (opt_entry) {
       // Set ret depending on what the execution of that job resulted in
-      ret = kbbi_launch (opt_entry, dedup_nodes, &nerrors, &nwarnings);
+      ret = kbbi_launch (opt_entry, trees, &nerrors, &nwarnings);
       if (ret != EXIT_SUCCESS) {
          fprintf (stderr, "Failed to execute job [%s]: %zu errors, %zu warnings\n",
                opt_entry, nerrors, nwarnings);
@@ -564,7 +573,6 @@ int main (int argc, char **argv)
    // TODO: This must come out, not needed when everything is working
    ret = EXIT_SUCCESS;
 cleanup:
-   printf ("::EXITCODE:%i\n", ret);
    // ds_array_iterate (trees, (void (*) (void *, void*))kbnode_dump, stdout);
    ds_array_fptr (paths, free);
    ds_array_fptr (files, free);
@@ -577,6 +585,10 @@ cleanup:
    ds_array_del (entrypoints);
    ds_array_fptr (trees, (void (*) (void *))kbnode_del);
    ds_array_del (trees);
+   if (ret != EXIT_SUCCESS) {
+      ret = EXIT_FAILURE;
+   }
+   printf ("::EXITCODE:%i\n", ret);
    return ret;
 }
 

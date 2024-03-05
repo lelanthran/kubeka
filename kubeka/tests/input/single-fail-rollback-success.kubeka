@@ -1,8 +1,8 @@
 [job]
 ID = single-fail-rollback-success-1
 MESSAGE = No message
-ROLLBACK = /bin/true
-EXEC = /bin/false
+ROLLBACK = echo "Rolling back successfully $<ID>" && /bin/true
+EXEC = echo "Failing EXEC command" && /bin/false
 
 [entrypoint]
 ID = single-fail-rollback-success-2

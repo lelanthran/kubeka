@@ -1,22 +1,43 @@
 Failed to open directory [/etc/kubeka] for reading: No such file or directory
-Instantiating [single-fail-no-rollback-2]
-Instantiating [single-fail-no-rollback-1]
-Error in tests/input/single-fail-no-rollback.kubeka:1: Failed to run node [single-fail-no-rollback-1]. Full node follows:
-Node [job] with parent [false]: 0x0
+Instantiating [single-fail-no-rollback-2] as child of [NULL]
+Instantiating [single-fail-no-rollback-1] as child of [single-fail-no-rollback-2]
+Error in tests/input/single-fail-no-rollback.kubeka:2: Failed to run node [single-fail-no-rollback-1]. Full node follows:
+Node [job] with parent [single-fail-no-rollback-2]: 0x1
    _FILENAME: tests/input/single-fail-no-rollback.kubeka
-   _LINE: 1
-   EXEC: echo "Failing on $<ID>" && /bin/false
+   _LINE: 2
+   EXEC: echo "Failing on single-fail-no-rollback-1" && /bin/false
    MESSAGE: Executing shell command
    ID: single-fail-no-rollback-1
-Error in tests/input/single-fail-no-rollback.kubeka:6: Child failure [single-fail-no-rollback-1]: Attempting rollback
-Error in tests/input/single-fail-no-rollback.kubeka:1: No rollback actions found for node [single-fail-no-rollback-1]
-Error in tests/input/single-fail-no-rollback.kubeka:6: Failed to run node [single-fail-no-rollback-2]. Full node follows:
-Node [entrypoint] with parent [false]: 0x0
+   njobs: 0
+   nhandlers: 0
+Error in tests/input/single-fail-no-rollback.kubeka:2: Error executing job[single-fail-no-rollback-1]:
+Node [job] with parent [single-fail-no-rollback-2]: 0x1
+   _FILENAME: tests/input/single-fail-no-rollback.kubeka
+   _LINE: 2
+   EXEC: echo "Failing on single-fail-no-rollback-1" && /bin/false
+   MESSAGE: Executing shell command
+   ID: single-fail-no-rollback-1
+   njobs: 0
+   nhandlers: 0
+Error in tests/input/single-fail-no-rollback.kubeka:2: No rollback actions found for node [single-fail-no-rollback-1]
+Error in tests/input/single-fail-no-rollback.kubeka:9: Failed to run node [single-fail-no-rollback-2]. Full node follows:
+Node [entrypoint] with parent [null]: 0x1
    _FILENAME: tests/input/single-fail-no-rollback.kubeka
    JOBS: single-fail-no-rollback-1
-   _LINE: 6
+   _LINE: 9
    MESSAGE: Entrypoint node
    ID: single-fail-no-rollback-2
+   njobs: 1
+   Node [job] with parent [single-fail-no-rollback-2]: 0x1
+      _FILENAME: tests/input/single-fail-no-rollback.kubeka
+      _LINE: 2
+      EXEC: echo "Failing on single-fail-no-rollback-1" && /bin/false
+      MESSAGE: Executing shell command
+      ID: single-fail-no-rollback-1
+      njobs: 0
+      nhandlers: 0
+   nhandlers: 1
+NULL node object!
 Failed to execute job [single-fail-no-rollback-2]: 0 errors, 2 warnings
 Processing 1 kubeka files
 Reading tests/input/single-fail-no-rollback.kubeka ...
@@ -28,9 +49,9 @@ Found 0 errors and 0 warnings
 Found 2 nodes (1 runnable)
 ::STARTING:single-fail-no-rollback-2:Entrypoint node
 ::STARTING:single-fail-no-rollback-1:Executing shell command
-::COMMAND:echo "Failing on $<ID>" && /bin/false:32 bytes
+::COMMAND:echo "Failing on single-fail-no-rollback-1" && /bin/false:1:64 bytes
 -----
-Failing on $<ID>
+Failing on single-fail-no-rollback-1
 
 -----
 ::EXITCODE:1

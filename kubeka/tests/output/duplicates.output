@@ -3,19 +3,23 @@ Duplicate node found ...
 Node-1 found in [tests/input/duplicates.kubeka:1]
 Node-2 found in [tests/input/duplicates.kubeka:6]
 === Node-1 dump follows: === 
-Node [job] with parent [false]: 0x0
+Node [job] with parent [null]: 0x0
    _FILENAME: tests/input/duplicates.kubeka
    _LINE: 1
    EXEC: echo Hello World (Node 1)
    MESSAGE: A duplicate node 1/2
    ID: duplicates-1
+   njobs: 0
+   nhandlers: 0
 === Node-2 dump follows: === 
-Node [job] with parent [false]: 0x0
+Node [job] with parent [null]: 0x0
    _FILENAME: tests/input/duplicates.kubeka
    _LINE: 6
    EXEC: echo Hello World (Node 2)
    MESSAGE: A duplicate node 2/2
    ID: duplicates-1
+   njobs: 0
+   nhandlers: 0
 [src/kbtree.c:101] Error in kbtree_coalesce(): Failed to add duplicated node
 Aborting due to 2 errors
 Processing 1 kubeka files

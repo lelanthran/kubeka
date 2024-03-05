@@ -2,7 +2,17 @@
 
 . tests/manual/tests.inc
 
-single_test single-fail-rollback-success failed
+rm -f vg.txt
+$PROG \
+   -f  tests/input/single-fail-rollback-success.kubeka \
+   -j  single-fail-rollback-success-2 \
+   &> tests/output/single-fail-rollback-success.output && failed
+
+diff\
+   tests/expected/single-fail-rollback-success.output \
+   tests/output/single-fail-rollback-success.output || failed
 
 passed
+
+failed
 
