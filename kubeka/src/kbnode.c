@@ -394,10 +394,12 @@ void kbnode_del (kbnode_t *node)
    node_del (&node);
 }
 
-bool kbnode_get_srcdef (kbnode_t *node, const char **fname, size_t *line)
+bool kbnode_get_srcdef (kbnode_t *node, const char **id, const char **fname,
+                        size_t *line)
 {
    *line = 0;
-   *fname = "unset";
+   *fname = "message not set";
+   *id = "id not set";
 
    if (!node) {
       return false;
@@ -405,12 +407,14 @@ bool kbnode_get_srcdef (kbnode_t *node, const char **fname, size_t *line)
 
    const char **f = kbsymtab_get (node->symtab, KBNODE_KEY_FNAME);
    const char **l = kbsymtab_get (node->symtab, KBNODE_KEY_LINE);
-   if (!f || !f[0] || !l || !l[0]) {
+   const char **i = kbsymtab_get (node->symtab, KBNODE_KEY_ID);
+   if (!f || !f[0] || !l || !l[0] || !i || !i[0]) {
       return false;
    }
 
    sscanf (l[0], "%zu", line);
    *fname = f[0];
+   *id = i[0];
    return true;
 }
 
@@ -747,7 +751,7 @@ void kbnode_check (kbnode_t *node, size_t *errors, size_t *warnings)
    for (size_t i=0; i<sizeof required/sizeof required[0]; i++) {
       if (!(kbsymtab_exists (node->symtab, required[i]))) {
          KBPARSE_WARN (fname, line, "Missing required key '%s'\n", required[i]);
-         INCPTR(*errors);
+         INCPTR(*warnings);
       }
    }
 

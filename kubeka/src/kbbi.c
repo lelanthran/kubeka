@@ -63,8 +63,9 @@ static kbnode_t *find_node (const char *node_id, ds_array_t *nodes)
 static bool kbbi_rollback (kbnode_t *node, size_t *nerrors, size_t *nwarnings)
 {
    const char *fname = NULL;
+   const char *id = NULL;
    size_t line;
-   if (!(kbnode_get_srcdef (node, &fname, &line))) {
+   if (!(kbnode_get_srcdef (node, &id, &fname, &line))) {
       KBERROR ("Node has no source file information");
       INCPTR (*nerrors);
       return false;
@@ -73,7 +74,7 @@ static bool kbbi_rollback (kbnode_t *node, size_t *nerrors, size_t *nwarnings)
    const char **actions = kbnode_getvalue_all (node, KBNODE_KEY_ROLLBACK);
    if (!actions || !actions[0]) {
       INCPTR (*nwarnings);
-      KBPARSE_ERROR (fname, line, "No rollback actions found\n");
+      KBPARSE_ERROR (fname, line, "No rollback actions found for node [%s]\n", id);
       return true;
    }
 
@@ -87,7 +88,7 @@ static int kbbi_run (kbnode_t *node, ds_array_t *nodes,
                      size_t *nerrors, size_t *nwarnings)
 {
    int ret = EXIT_FAILURE;
-   const char *s_id = kbnode_getvalue_first (node, KBNODE_KEY_ID);
+   const char *id = kbnode_getvalue_first (node, KBNODE_KEY_ID);
    const char *s_message = kbnode_getvalue_first (node, KBNODE_KEY_MESSAGE);
    const char *fname = NULL;
    size_t line = 0;
@@ -95,19 +96,13 @@ static int kbbi_run (kbnode_t *node, ds_array_t *nodes,
    const char *s_exec = kbnode_getvalue_first (node, KBNODE_KEY_EXEC);
    const char *s_emit = kbnode_getvalue_first (node, KBNODE_KEY_EMITS);
 
-   if (!(kbnode_get_srcdef (node, &fname, &line))) {
+   if (!(kbnode_get_srcdef (node, &id, &fname, &line))) {
       KBERROR ("Node has no source file information\n");
       INCPTR (*nerrors);
       goto cleanup;
    }
 
-   if (!s_id || !s_id[0]) {
-      KBERROR ("Node %p has no ID field\n", node);
-      INCPTR (*nerrors);
-      goto cleanup;
-   }
-
-   printf ("::STARTING:%s:%s\n", s_id, s_message);
+   printf ("::STARTING:%s:%s\n", id, s_message);
 
    if (s_emit && s_emit[0]) {
       ds_array_t *handler_nodes = kbnode_filter_handlers (nodes, s_emit, NULL);
@@ -174,12 +169,12 @@ static int kbbi_run (kbnode_t *node, ds_array_t *nodes,
    }
 
    KBPARSE_ERROR (fname, line,
-            "Failed to find one of JOBS[], EXEC or EMITS in node [%s]\n", s_id);
+            "Failed to find one of JOBS[], EXEC or EMITS in node [%s]\n", id);
 
 cleanup:
    if (ret != EXIT_SUCCESS) {
       KBPARSE_ERROR (fname, line,
-               "Failed to run node [%s]. Full node follows:\n", s_id);
+               "Failed to run node [%s]. Full node follows:\n", id);
       kbnode_dump (node, stderr);
    }
 

@@ -64,12 +64,16 @@ ds_array_t *kbtree_coalesce (ds_array_t *nodes, size_t *nduplicates,
       kbnode_t *existing = ds_set_find (set, node, 0);
       if (existing) {
          const char *node_src_fname = NULL;
+         const char *node_id = NULL;
          size_t node_src_line = 0;
          const char *existing_src_fname = NULL;
+         const char *existing_id = NULL;
          size_t existing_src_line = 0;
 
-         if (!(kbnode_get_srcdef (existing, &existing_src_fname, &existing_src_line))
-               || !(kbnode_get_srcdef (node, &node_src_fname, &node_src_line))) {
+         if (!(kbnode_get_srcdef (existing, &existing_id, &existing_src_fname,
+                                  &existing_src_line))
+               || !(kbnode_get_srcdef (node, &node_id, &node_src_fname,
+                                       &node_src_line))) {
             KBERROR ("Failed to retrieve file/line number information for duplicate"
                      " nodes, aborting\n");
             *nerrors = (*nerrors) + 1;
@@ -224,9 +228,10 @@ void kbtree_eval (kbnode_t *root, ds_array_t *nodes,
 {
    const char **keys = kbnode_keys (root);
    const char *fname;
+   const char *id;
    size_t line;
 
-   if (!(kbnode_get_srcdef (root, &fname, &line))) {
+   if (!(kbnode_get_srcdef (root, &id, &fname, &line))) {
       KBERROR ("Failed to get node filename and line number information\n");
       INCPTR (*nerrors);
       goto cleanup;
@@ -283,11 +288,6 @@ void kbtree_eval (kbnode_t *root, ds_array_t *nodes,
       }
 
       for (size_t j=0; values[j]; j++) {
-         if (!(kbnode_get_srcdef (root, &fname, &line))) {
-            KBERROR ("Failed to get node filename and line number information\n");
-            INCPTR (*nerrors);
-            goto cleanup;
-         }
 
          char *newvalue = ds_str_dup (values[j]);
          char *ref = NULL;

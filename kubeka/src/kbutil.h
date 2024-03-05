@@ -16,21 +16,25 @@
 #define KBWARN(...)     do {\
    fprintf (stderr, "[%s:%i] Warning in %s(): ", __FILE__, __LINE__, __func__);\
    fprintf (stderr, __VA_ARGS__);\
+   fflush (stderr);\
 } while (0)
 
 #define KBERROR(...)     do {\
    fprintf (stderr, "[%s:%i] Error in %s(): ", __FILE__, __LINE__, __func__);\
    fprintf (stderr, __VA_ARGS__);\
+   fflush (stderr);\
 } while (0)
 
 #define KBPARSE_ERROR(fname,line, ...)     do {\
    fprintf (stderr, "Error in %s:%zu: ", fname, line);\
    fprintf (stderr, __VA_ARGS__);\
+   fflush (stderr);\
 } while (0)
 
 #define KBPARSE_WARN(fname,line, ...)     do {\
    fprintf (stderr, "Warning in %s:%zu: ", fname, line);\
    fprintf (stderr, __VA_ARGS__);\
+   fflush (stderr);\
 } while (0)
 
 

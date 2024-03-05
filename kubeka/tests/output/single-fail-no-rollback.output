@@ -9,7 +9,7 @@ Node [job] with parent [false]: 0x0
    MESSAGE: Executing shell command
    ID: single-fail-no-rollback-1
 Error in tests/input/single-fail-no-rollback.kubeka:6: Child failure [single-fail-no-rollback-1]: Attempting rollback
-Error in tests/input/single-fail-no-rollback.kubeka:1: No rollback actions found
+Error in tests/input/single-fail-no-rollback.kubeka:1: No rollback actions found for node [single-fail-no-rollback-1]
 Error in tests/input/single-fail-no-rollback.kubeka:6: Failed to run node [single-fail-no-rollback-2]. Full node follows:
 Node [entrypoint] with parent [false]: 0x0
    _FILENAME: tests/input/single-fail-no-rollback.kubeka

@@ -16,7 +16,7 @@ Node [job] with parent [false]: 0x0
    EXEC: echo Hello World (Node 2)
    MESSAGE: A duplicate node 2/2
    ID: duplicates-1
-[src/kbtree.c:97] Error in kbtree_coalesce(): Failed to add duplicated node
+[src/kbtree.c:101] Error in kbtree_coalesce(): Failed to add duplicated node
 Aborting due to 2 errors
 Processing 1 kubeka files
 Reading tests/input/duplicates.kubeka ...

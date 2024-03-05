@@ -58,7 +58,8 @@ extern "C" {
    //
    // On success true is returned. On both success and failre the caller must not
    // free the `fname` that is set.
-   bool kbnode_get_srcdef (kbnode_t *node, const char **fname, size_t *line);
+   bool kbnode_get_srcdef (kbnode_t *node, const char **id, const char **fname,
+                           size_t *line);
 
    // Get the first value for the specified key. The caller must not free the
    // returned value.
