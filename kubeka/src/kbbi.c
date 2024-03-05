@@ -88,6 +88,7 @@ static int kbbi_run (kbnode_t *node, ds_array_t *nodes,
 {
    int ret = EXIT_FAILURE;
    const char *s_id = kbnode_getvalue_first (node, KBNODE_KEY_ID);
+   const char *s_message = kbnode_getvalue_first (node, KBNODE_KEY_MESSAGE);
    const char *fname = NULL;
    size_t line = 0;
    const char **s_jobs = kbnode_getvalue_all (node, KBNODE_KEY_JOBS);
@@ -106,9 +107,7 @@ static int kbbi_run (kbnode_t *node, ds_array_t *nodes,
       goto cleanup;
    }
 
-   printf ("::STARTING:%s:%s\n",
-            kbnode_getvalue_first (node, KBNODE_KEY_ID),
-            kbnode_getvalue_first (node, KBNODE_KEY_MESSAGE));
+   printf ("::STARTING:%s:%s\n", s_id, s_message);
 
    if (s_emit && s_emit[0]) {
       ds_array_t *handler_nodes = kbnode_filter_handlers (nodes, s_emit, NULL);
@@ -174,8 +173,16 @@ static int kbbi_run (kbnode_t *node, ds_array_t *nodes,
       goto cleanup;
    }
 
-   KBERROR ("Failed to find one of JOBS[], EXEC or EMITS in node [%s]\n", s_id);
+   KBPARSE_ERROR (fname, line,
+            "Failed to find one of JOBS[], EXEC or EMITS in node [%s]\n", s_id);
+
 cleanup:
+   if (ret != EXIT_SUCCESS) {
+      KBPARSE_ERROR (fname, line,
+               "Failed to run node [%s]. Full node follows:\n", s_id);
+      kbnode_dump (node, stderr);
+   }
+
    return ret;
 }
 

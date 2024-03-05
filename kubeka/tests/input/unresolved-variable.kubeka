@@ -2,10 +2,10 @@
 ID = unresolved-variable-1
 MESSAGE = circular-dependency-1
 SELF_VAR = Set in self
-EXEC = echo "Checking for $(CALER_VAR)" # This must fail
+EXEC = echo "Checking for $<CALER_VAR>" # This must fail
 
 [entrypoint]
-ID =   circular-dependency-manual
+ID =   unresolved-variable-2
 MESSAGE = Starting node manually
 CALLER_VAR = Set in caller
 JOBS = [ unresolved-variable-1 ]

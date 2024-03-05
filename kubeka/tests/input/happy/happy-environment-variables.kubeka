@@ -2,11 +2,11 @@
 ID = Setup
 MESSAGE = Setting up to run the job
 SELF_VAR = set in self
-EXEC = echo "caller: '$(CALLER_VAR)', EV: '$(getenv EVCALLER)'"
+EXEC = echo "caller: '$<CALLER_VAR>', EV: '$<getenv EVCALLER>'"
 
 [entrypoint]
 ID = runjob
 MESSAGE = Running the job
-CALLER_VAR = $(setenv EVCALLER=set by caller)
+CALLER_VAR = $<setenv EVCALLER=set by caller>
 JOBS[] = [ Setup ]
 

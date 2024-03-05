@@ -228,6 +228,7 @@ static kbnode_t *node_instantiate (const kbnode_t *src, kbnode_t *parent,
 
    fprintf (stderr, "Instantiating [%s]\n",
          kbsymtab_get_string (src->symtab, KBNODE_KEY_ID));
+
    // 1. Create a new node (fname and line don't matter here, it will be set
    // below anyway during the cloning of the symbol table)
    kbnode_t *ret = node_new ("", 0, node_type_name (src->type), parent);
@@ -249,6 +250,7 @@ static kbnode_t *node_instantiate (const kbnode_t *src, kbnode_t *parent,
 
    // 4. Recursively create all children
    for (size_t i=0; jobs && jobs[i]; i++) {
+
       if (!(ref = node_findbyid (all, jobs[i]))) {
          KBPARSE_ERROR (node_filename (src), node_line (src),
                "Failed to find reference to job [%s]\n", jobs[i]);
@@ -421,7 +423,6 @@ const char *kbnode_getvalue_first (const kbnode_t *node, const char *key)
 const char **kbnode_getvalue_all (const kbnode_t *node, const char *key)
 {
    static const char *dummy[] = {
-      "",
       NULL,
    };
 
@@ -492,16 +493,21 @@ bool kbnode_read_file (ds_array_t *dst, const char *fname,
          goto cleanup;
       }
 
+      if ((tmp = strchr (line, '\n')) == NULL) {
+         KBPARSE_ERROR (fname, lc,
+               "Line length limit of %i bytes exceeded\n", line_len);
+         INCPTR (*nerrors);
+         current = NULL;
+         goto cleanup;
+      }
+      *tmp = 0;
+
       // TODO: All occurrences of `strchr()` must be replaced with
       // mystrchr which returns the first non-escaped character.
       if ((tmp = strchr (line, '#'))) {
          // TODO: Check for escaped character
          *tmp = 0;
       }
-      if ((tmp = strchr (line, '\n'))) {
-         *tmp = 0;
-      }
-
       ds_str_trim (line);
       // Empty line, ignore
       if (line[0] == 0) {

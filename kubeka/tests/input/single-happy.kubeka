@@ -12,4 +12,4 @@ JOBS[] = [ single-happy-1 ]
 ID = single-happy-3
 MESSAGE  = the handler for signals
 HANDLES = sig-single-happy-3
-EXEC = /bin/true && echo "Hello World"
+EXEC = /bin/true && echo "Hello World from $<ID>"

@@ -1,19 +1,19 @@
 [job]
 ID = 1000
-MESSAGE = This is my job: $(ID)
+MESSAGE = This is my job: $<ID>
 HANDLES = SIGNAL: 1
-EXEC = echo 'Hello $(ID)'
+EXEC = echo 'Hello $<ID>'
 
 
 [job]
 ID = 1001
-MESSAGE = This is my job: $(ID)
+MESSAGE = This is my job: $<ID>
 HANDLES = SIGNAL: 1
-EXEC = echo 'Hello $(ID)'
+EXEC = echo 'Hello $<ID>'
 
 
 [periodic]
 ID = 1002
-MESSAGE = This is an entrypoint: $(ID)
+MESSAGE = This is an entrypoint: $<ID>
 EMIT = SIGNAL: 1
 

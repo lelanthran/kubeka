@@ -1,10 +1,10 @@
 [job]
-ID = single-fail-1
-MESSAGE = No message
-EXEC = echo "Failing on $(ID)" && /bin/false
+ID = single-fail-no-rollback-1
+MESSAGE = Executing shell command
+EXEC = echo "Failing on $<ID>" && /bin/false
 
 [entrypoint]
-ID = single-fail-2
-MESSAGE = Still no message
-JOBS[] = [ single-fail-1 ]
+ID = single-fail-no-rollback-2
+MESSAGE = Entrypoint node
+JOBS[] = [ single-fail-no-rollback-1 ]
 

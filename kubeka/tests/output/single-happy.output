@@ -12,9 +12,9 @@ Found 3 nodes (1 runnable)
 ::STARTING:single-happy-2:Still no message
 ::STARTING:single-happy-1:No message
 ::STARTING:single-happy-3:the handler for signals
-::COMMAND:/bin/true && echo "Hello World":16 bytes
+::COMMAND:/bin/true && echo "Hello World from single-happy-3":64 bytes
 -----
-Hello World
+Hello World from single-happy-3
 
 -----
 ::EXITCODE:0

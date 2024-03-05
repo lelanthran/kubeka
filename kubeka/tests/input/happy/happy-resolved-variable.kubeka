@@ -2,7 +2,7 @@
 ID = Setup
 MESSAGE = Setting up to run the job
 SELF_VAR = set in self
-EXEC = echo "caller: $(CALLER_VAR), self: $(SELF_VAR)"
+EXEC = echo "caller: $<CALLER_VAR>, self: $<SELF_VAR>"
 
 [entrypoint]
 ID = runjob

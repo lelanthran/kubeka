@@ -1,17 +1,17 @@
 [job]
 ID = 3000
-MESSAGE = This is my job: $(ID)
-EXEC = echo 'Hello $(ID)'
+MESSAGE = This is my job: $<ID>
+EXEC = echo 'Hello $<ID>'
 
 
 [job]
 ID = 3001
-MESSAGE = This is my job: $(ID)
-EXEC = echo 'Hello $(ID)'
+MESSAGE = This is my job: $<ID>
+EXEC = echo 'Hello $<ID>'
 
 
 [periodic]
 ID = 3002
-MESSAGE = This is an entrypoint: $(ID)
+MESSAGE = This is an entrypoint: $<ID>
 JOBS[] = [ 3001, 3000 ]
 

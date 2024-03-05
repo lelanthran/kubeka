@@ -30,11 +30,17 @@ fi
 PROG="$PROG recent/bin/kubeka.elf"
 
 single_test() {
-   rm -f vg.txt
-   $PROG --lint \
-      -f  tests/input/$1.kubeka \
-      &> tests/output/$1.output && eval $2
-            diff tests/expected/$1.output tests/output/$1.output || failed
+   if [ `echo $PROG | grep -c 'gdb'` -gt 0 ]; then
+      $PROG --lint \
+         -f  tests/input/$1.kubeka \
+         || failed
+   else
+      rm -f vg.txt
+      $PROG --lint \
+         -f  tests/input/$1.kubeka \
+         &> tests/output/$1.output && eval $2
+               diff tests/expected/$1.output tests/output/$1.output || failed
+   fi
 }
 
 if [ -z "$INCLUDED" ]; then

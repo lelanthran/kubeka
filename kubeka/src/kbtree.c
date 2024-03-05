@@ -133,7 +133,7 @@ static char *exec_builtin (char *ref, const kbnode_t *node, size_t *nerrors,
       return NULL;
    }
    *params++ = 0;
-   char *end = strchr (params, ')');
+   char *end = strchr (params, '>');
    if (!end) {
       KBPARSE_ERROR (fname, line, "Failed to find end of function call in [%s]\n",
             params);
@@ -152,7 +152,7 @@ static char *exec_builtin (char *ref, const kbnode_t *node, size_t *nerrors,
    }
 
    char *ret = fptr (func, params, node, nerrors, fname, line);
-   *end = ')';
+   *end = '>';
    *(params - 1) = ' ';
    return ret;
 }
@@ -165,24 +165,25 @@ static char *resolve (char *ref, const kbnode_t *node, size_t *nerrors,
    }
 
    char *start = &ref[2];
-   char *end = strchr (start, ')');
+   char *end = strchr (start, '>');
    if (!end) {
-      KBPARSE_ERROR (fname, line, "Missing terminating ')' in symbol reference\n");
+      KBPARSE_ERROR (fname, line, "Missing terminating '>' in symbol reference\n");
       INCPTR (*nerrors);
       return NULL;
    }
 
    *end = 0;
    const char **values = kbnode_resolve (node, start);
-   *end = ')';
 
    if (!values) {
       KBPARSE_ERROR (fname, line, "Failed to find values for symbol %s\n",
                start);
       INCPTR (*nerrors);
+      *end = '>';
       return NULL;
    }
 
+   *end = '>';
    return kbutil_strarray_format (values);
 }
 
@@ -190,14 +191,14 @@ static char *find_next_ref (const char *src, size_t *nerrors,
                             const char *fname, size_t line)
 {
    char *ret = NULL;
-   char *start = strstr (src, "$(");
+   char *start = strstr (src, "$<");
    if (!start) {
       return NULL;
    }
 
-   char *end = strchr (&start[2], ')');
+   char *end = strchr (&start[2], '>');
    if (!end) {
-      KBPARSE_ERROR (fname, line, "Missing terminating ')' in symbol reference\n");
+      KBPARSE_ERROR (fname, line, "Missing terminating '>' in symbol reference\n");
       INCPTR (*nerrors);
       return NULL;
    }
@@ -238,7 +239,7 @@ void kbtree_eval (kbnode_t *root, ds_array_t *nodes,
    }
 
    // If this has any EMITS values, then the corresponding HANDLES must
-   // be found in a node somewhere.
+   // be found in a node somewhere. That node must likewise be evaluated.
    const char **emits = kbnode_getvalue_all (root, KBNODE_KEY_EMITS);
    for (size_t i=0; emits && emits[i]; i++) {
       ds_array_t *node_handlers = kbnode_filter_handlers (nodes, emits[i], NULL);
@@ -251,6 +252,14 @@ void kbtree_eval (kbnode_t *root, ds_array_t *nodes,
       if (!nnode_handlers) {
          KBPARSE_ERROR (fname, line, "Node emits signal [%s] which is unhandled\n",
                   emits[i]);
+         INCPTR (*nerrors);
+         ds_array_del (node_handlers);
+         continue;
+      }
+
+      for (size_t j=0; j<nnode_handlers; j++) {
+         kbnode_t *handler_node = ds_array_get (node_handlers, j);
+         kbtree_eval (handler_node, nodes, nerrors, nwarnings);
       }
       ds_array_del (node_handlers);
    }
@@ -274,7 +283,6 @@ void kbtree_eval (kbnode_t *root, ds_array_t *nodes,
       }
 
       for (size_t j=0; values[j]; j++) {
-
          if (!(kbnode_get_srcdef (root, &fname, &line))) {
             KBERROR ("Failed to get node filename and line number information\n");
             INCPTR (*nerrors);
