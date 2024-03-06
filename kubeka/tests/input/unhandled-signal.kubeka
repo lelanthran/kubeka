@@ -1,0 +1,13 @@
+[job]
+ID = unhandled-signal-1
+MESSAGE = No message
+HANDLES[] = [ UNHANDLED-SIGNAL-1, UNHANDLED-SIGNAL-2]
+ROLLBACK = /bin/true
+EXEC = /bin/true
+
+[entrypoint]
+ID = unhandled-signal-2
+MESSAGE = Still no message
+EMITS[] = [ UNHANDLED-SIGNAL-1, UNHANDLED-SIGNAL-3]
+
+
