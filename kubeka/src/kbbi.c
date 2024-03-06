@@ -89,8 +89,11 @@ static bool kbbi_rollback (kbnode_t *node, size_t *nerrors, size_t *nwarnings)
                actions[i], rc, result_len, result);
       if (rc) {
          KBPARSE_ERROR (fname, line, "Node [%s] failed to rollback\n", id);
+      } else {
+         KBPARSE_ERROR (fname, line,
+               "Successful ROLLBACK on node [%s] (%zu rollback actions found)\n",
+               id, kbutil_strarray_length (actions));
       }
-
       free (result);
    }
    return true;

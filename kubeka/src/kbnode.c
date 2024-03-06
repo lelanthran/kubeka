@@ -167,6 +167,8 @@ static struct djobs_t *node_find_dependent_jobs (const kbnode_t *node,
    size_t line = 0;
    struct djobs_t *ret = NULL;
 
+   ds_array_t *sighandlers = NULL;
+
    if (!(kbnode_get_srcdef (node, &id, &fname, &line))) {
       INCPTR (*nerrors);
       KBERROR ("Failed to get node information\n");
@@ -207,7 +209,7 @@ static struct djobs_t *node_find_dependent_jobs (const kbnode_t *node,
          NULL,
       };
 
-      ds_array_t *sighandlers = kbnode_filter_handlers (all, sigs);
+      sighandlers = kbnode_filter_handlers (all, sigs);
       if (!sighandlers) {
          KBERROR ("OOM filtering signals into array\n");
          INCPTR (*nerrors);
@@ -229,6 +231,7 @@ static struct djobs_t *node_find_dependent_jobs (const kbnode_t *node,
          }
       }
       ds_array_del (sighandlers);
+      sighandlers = NULL;
    }
 
    size_t nhandlers = ds_array_length (handlers);
@@ -250,6 +253,7 @@ static struct djobs_t *node_find_dependent_jobs (const kbnode_t *node,
 
 cleanup:
    ds_array_del (handlers);
+   ds_array_del (sighandlers);
    if (error) {
       free (ret);
       ret = NULL;

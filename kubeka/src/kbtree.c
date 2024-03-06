@@ -230,12 +230,6 @@ void kbtree_eval (kbnode_t *root, size_t *nerrors, size_t *nwarnings)
    const char *id;
    size_t line;
 
-   if (!(kbnode_get_srcdef (root, &id, &fname, &line))) {
-      KBERROR ("Failed to get node filename and line number information\n");
-      INCPTR (*nerrors);
-      goto cleanup;
-   }
-
    if (!keys) {
       KBPARSE_ERROR (fname, line, "Failed to get node symbols\n");
       INCPTR (*nerrors);
@@ -267,6 +261,12 @@ void kbtree_eval (kbnode_t *root, size_t *nerrors, size_t *nwarnings)
    //
 
    for (size_t i=0; keys[i]; i++) {
+      if (!(kbnode_get_srcdef (root, &id, &fname, &line))) {
+         KBERROR ("Failed to get node filename and line number information\n");
+         INCPTR (*nerrors);
+         goto cleanup;
+      }
+
       const char **values = kbnode_getvalue_all (root, keys[i]);
       if (!values) {
          KBPARSE_ERROR (fname, line, "Failed to get values for symbol %s\n",
