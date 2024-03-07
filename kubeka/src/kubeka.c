@@ -19,8 +19,13 @@
 #include "kbtree.h"
 #include "kbbi.h"
 
-#define ERROR(...)      do {\
+#define IERROR(...)      do {\
    fprintf (stderr, "%s:%i Internal error: ", __FILE__, __LINE__);\
+   fprintf (stderr, __VA_ARGS__);\
+} while (0);
+
+#define XERROR(...)      do {\
+   fprintf (stderr, "Error: ");\
    fprintf (stderr, __VA_ARGS__);\
 } while (0);
 
@@ -176,7 +181,7 @@ static void process_path (ds_array_t *files, const char *path)
    DIR *dirp = opendir (path);
    if (errno == ENOTDIR) {
       if (!(ds_array_ins_tail (files, ds_str_dup (path)))) {
-         ERROR ("OOM storing file [%s]\n", path);
+         IERROR ("OOM storing file [%s]\n", path);
       }
       return;
    }
@@ -201,7 +206,7 @@ static void process_path (ds_array_t *files, const char *path)
       }
       if ((memcmp (&de->d_name[namelen - extlen], ext, extlen)) == 0) {
          if (!(ds_array_ins_tail (files, ds_str_cat (path, "/", de->d_name, NULL)))) {
-            ERROR ("OOM storing file %s/[%s]\n", path, de->d_name);
+            IERROR ("OOM storing file %s/[%s]\n", path, de->d_name);
          }
       }
    }
@@ -212,7 +217,7 @@ static ds_array_t *process_paths (ds_array_t *dirs)
 {
    ds_array_t *files = ds_array_new ();
    if (!files) {
-      ERROR ("OOM creating fileslist\n");
+      IERROR ("OOM creating fileslist\n");
       return NULL;
    }
 
@@ -257,11 +262,11 @@ int main (int argc, char **argv)
    // 1.2 Read all the -p/--path options
    paths = ds_array_new ();
    if (!paths) {
-      ERROR ("OOM allocating paths array\n");
+      IERROR ("OOM allocating paths array\n");
       goto cleanup;
    }
    if (!(ds_array_ins_tail (paths, ds_str_dup ("/etc/kubeka")))) {
-      ERROR ("OOM storing first path element\n");
+      IERROR ("OOM storing first path element\n");
       goto cleanup;
    }
 
@@ -269,7 +274,7 @@ int main (int argc, char **argv)
    size_t counter = 0;
    while ((opt_path = opt_long (argc, argv, "path"))) {
       if (!(ds_array_ins_tail (paths, (void *)ds_str_dup (opt_path)))) {
-         ERROR ("OOM storing --path=%s (%zu)\n", opt_path, counter);
+         IERROR ("OOM storing --path=%s (%zu)\n", opt_path, counter);
          goto cleanup;
       }
       counter++;
@@ -277,7 +282,7 @@ int main (int argc, char **argv)
    counter = 0;
    while ((opt_path = opt_short (argc, argv, 'p'))) {
       if (!(ds_array_ins_tail (paths, (void *)ds_str_dup (opt_path)))) {
-         ERROR ("OOM storing -p=%s (%zu)\n", opt_path, counter);
+         IERROR ("OOM storing -p=%s (%zu)\n", opt_path, counter);
          goto cleanup;
       }
       counter++;
@@ -287,7 +292,7 @@ int main (int argc, char **argv)
    const char *opt_file = NULL;
    while ((opt_file = opt_long (argc, argv, "file"))) {
       if (!(ds_array_ins_tail (paths, (void *)ds_str_dup (opt_path)))) {
-         ERROR ("OOM storing --file=%s (%zu)\n", opt_path, counter);
+         IERROR ("OOM storing --file=%s (%zu)\n", opt_path, counter);
          goto cleanup;
       }
       counter++;
@@ -295,7 +300,7 @@ int main (int argc, char **argv)
    counter = 0;
    while ((opt_path = opt_short (argc, argv, 'f'))) {
       if (!(ds_array_ins_tail (paths, (void *)ds_str_dup (opt_path)))) {
-         ERROR ("OOM storing -f=%s (%zu)\n", opt_path, counter);
+         IERROR ("OOM storing -f=%s (%zu)\n", opt_path, counter);
          goto cleanup;
       }
       counter++;
@@ -308,7 +313,7 @@ int main (int argc, char **argv)
    }
    // 1.4.2 Only a single -j flag is supported in single-shot mode
    if (opt_short (argc, argv, 'j') || opt_long (argc, argv, "job")) {
-      ERROR ("Cannot specify more than one job to run\n");
+      XERROR ("Cannot specify more than one job to run\n");
       goto cleanup;
    }
 
@@ -320,12 +325,12 @@ int main (int argc, char **argv)
 
    // Sanity check - user cannot specify both jobs and daemonize
    if (opt_entry && opt_daemon) {
-      ERROR ("Cannot specify both a job to run and --daemonize\n");
+      XERROR ("Cannot specify both a job to run and --daemonize\n");
       goto cleanup;
    }
    // Sanity check - user MUST specify ONE OF lint, daemonize or job
    if (!opt_daemon && !opt_lint && !opt_entry) {
-      ERROR ("Must specify one of --daemon, --lint or --job\n");
+      XERROR ("Must specify one of --daemon, --lint or --job\n");
       goto cleanup;
    }
 
@@ -334,7 +339,7 @@ int main (int argc, char **argv)
       if (!opt_lint) {
          pid_t pid = fork ();
          if (pid < 0) {
-            ERROR ("Failed to create child process: %m\n");
+            XERROR ("Failed to create child process: %m\n");
             goto cleanup;
          }
          if (pid > 0) {
@@ -368,7 +373,7 @@ int main (int argc, char **argv)
 
    // 2.1. Generate a list of files to read and load
    if (!(files = process_paths (paths))) {
-      ERROR ("Fatal error  processing  paths\n");
+      XERROR ("Failed to process paths\n");
       goto cleanup;
    }
 
@@ -383,7 +388,7 @@ int main (int argc, char **argv)
 
 
    if (!(nodes = ds_array_new ())) {
-      ERROR ("Failed to create array to store nodes\n");
+      IERROR ("Failed to create array to store nodes\n");
       goto cleanup;
    }
    size_t nfiles = ds_array_length (files);
@@ -421,7 +426,7 @@ int main (int argc, char **argv)
 
    printf ("Checking for duplicates ... ");
    if (!(dedup_nodes = kbtree_coalesce (nodes, &ndups, &errors, &warnings))) {
-      ERROR ("Internal error, aborting\n");
+      XERROR ("Failed to coalesce nodelist. Aborting.\n");
       goto cleanup;
    }
 
@@ -459,7 +464,7 @@ int main (int argc, char **argv)
 
 
    if (!(trees = ds_array_new ())) {
-      ERROR ("OOM creating root node arrays\n");
+      IERROR ("OOM creating root node arrays\n");
       nerrors++;
       goto cleanup;
    }
@@ -474,10 +479,10 @@ int main (int argc, char **argv)
       const kbnode_t *ep = ds_array_get (entrypoints, i);
       kbnode_t *newnode = kbnode_instantiate (ep, dedup_nodes, &nerrors, &nwarnings);
       if (!newnode) {
-         ERROR ("Errors encountered during instantiation of node\n");
+         XERROR ("Node instantiation failure\n");
       }
       if (!(ds_array_ins_tail (trees, newnode))) {
-         ERROR ("OOM storing new root node\n");
+         IERROR ("OOM storing new root node\n");
       }
    }
 
@@ -564,7 +569,7 @@ int main (int argc, char **argv)
    if (!opt_entry) {
       // Wait for SIGINT to tell us to exit
       if ((signal (SIGINT, sigh) == SIG_ERR)) {
-         ERROR ("Failed to set signal handler for SIGINT: %m\n");
+         XERROR ("Failed to set signal handler for SIGINT: %m\n");
          goto cleanup;
       }
 

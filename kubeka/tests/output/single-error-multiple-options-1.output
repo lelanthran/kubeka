@@ -1,2 +1,2 @@
-src/kubeka.c:311 Internal error: Cannot specify more than one job to run
+Error: Cannot specify more than one job to run
 ::EXITCODE:1

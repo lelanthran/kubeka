@@ -1,2 +1,2 @@
-src/kubeka.c:328 Internal error: Must specify one of --daemon, --lint or --job
+Error: Must specify one of --daemon, --lint or --job
 ::EXITCODE:1

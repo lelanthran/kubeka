@@ -48,8 +48,8 @@ Error in tests/input/self-dependency.kubeka:6: Failed to instantiate job 0 [self
 Error in tests/input/self-dependency.kubeka:11: Failed to instantiate job 0 [self-dependency-2]
 Error in tests/input/self-dependency.kubeka:16: Failed to instantiate job 0 [self-dependency-3]
 Error in tests/input/self-dependency.kubeka:16: Failed to instantiate node
-src/kubeka.c:477 Internal error: Errors encountered during instantiation of node
-src/kubeka.c:480 Internal error: OOM storing new root node
+Error: Node instantiation failure
+src/kubeka.c:485 Internal error: OOM storing new root node
 Aborting due to 4 errors
 Processing 1 kubeka files
 Reading tests/input/self-dependency.kubeka ...

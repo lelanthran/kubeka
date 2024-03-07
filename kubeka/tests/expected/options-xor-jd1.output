@@ -1,2 +1,2 @@
-src/kubeka.c:323 Internal error: Cannot specify both a job to run and --daemonize
+Error: Cannot specify both a job to run and --daemonize
 ::EXITCODE:1
