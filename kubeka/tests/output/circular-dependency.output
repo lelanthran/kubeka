@@ -58,8 +58,8 @@ Error in tests/input/circular-dependency.kubeka:1: Failed to instantiate job 0 [
 Error in tests/input/circular-dependency.kubeka:11: Failed to instantiate job 0 [circular-dependency-1]
 Error in tests/input/circular-dependency.kubeka:16: Failed to instantiate job 0 [circular-dependency-3]
 Error in tests/input/circular-dependency.kubeka:16: Failed to instantiate node
-src/kubeka.c:467 Internal error: Errors encountered during instantiation of node
-src/kubeka.c:470 Internal error: OOM storing new root node
+src/kubeka.c:477 Internal error: Errors encountered during instantiation of node
+src/kubeka.c:480 Internal error: OOM storing new root node
 Aborting due to 4 errors
 Processing 1 kubeka files
 Reading tests/input/circular-dependency.kubeka ...

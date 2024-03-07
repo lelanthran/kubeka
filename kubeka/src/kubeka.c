@@ -140,10 +140,11 @@ static void print_help_msg (void)
 "  -h | --help",
 "              Display this message and exit with a successful return code.",
 "  -d | --daemon",
-"              Run in the background, and return a successful return code.",
+"              Run in the background, and return a successful return code. Note",
+"              that exactly ONE OF `--daemon` or `--job` MUST BE SPECIFIED.",
 "  -l | --lint",
 "              Read and parse all files for errors and warnings. Do not attempt",
-"              to execute any node.",
+"              to execute any node. Any `--daemon` or `--job` flags are ignored.",
 "  -p | --path",
 "              Path containing additional configuration *.kubeka files. This",
 "              option can be specified multiple times, once for each path that",
@@ -153,7 +154,8 @@ static void print_help_msg (void)
 "              times, once for each additional file that must be parsed.",
 "  -j | --job=<job-id>",
 "              The single job to execute. This is to allow execution of jobs from",
-"              the command-line. The job has to be of type `entrypoint`.",
+"              the command-line. The job has to be of type `entrypoint`. Note that",
+"              exactly ONE OF `--daemon` or `--job` MUST BE SPECIFIED.",
 "  -W | --Werror",
 "              Treat all warnings as errors.",
 "",
@@ -314,13 +316,21 @@ int main (int argc, char **argv)
    bool opt_lint = opt_bool (argc, argv, "lint", 'l');
 
    // 1.6 Check if we are to daemonize
-   if ((opt_bool (argc, argv, "daemon", 'd'))) {
-      // Sanity check - user cannot specify both jobs and daemonize
-      if (opt_entry) {
-         ERROR ("Cannot specify both a job to run and --daemonize\n");
-         goto cleanup;
-      }
+   bool opt_daemon = opt_bool (argc, argv, "daemon", 'd');
 
+   // Sanity check - user cannot specify both jobs and daemonize
+   if (opt_entry && opt_daemon) {
+      ERROR ("Cannot specify both a job to run and --daemonize\n");
+      goto cleanup;
+   }
+   // Sanity check - user MUST specify ONE OF lint, daemonize or job
+   if (!opt_daemon && !opt_lint && !opt_entry) {
+      ERROR ("Must specify one of --daemon, --lint or --job\n");
+      goto cleanup;
+   }
+
+
+   if (opt_daemon) {
       if (!opt_lint) {
          pid_t pid = fork ();
          if (pid < 0) {
@@ -558,6 +568,10 @@ int main (int argc, char **argv)
          goto cleanup;
       }
 
+      // For each entrypoint in 'trees':
+      // 1. If it is of type 'periodic', start a thread with the period
+      //    set.
+      // 2. ... More thread types go here ...
       while (!g_endloop) {
          // Do nothing
       }
