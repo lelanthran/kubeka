@@ -171,7 +171,7 @@ static struct djobs_t *node_find_dependent_jobs (const kbnode_t *node,
 
    if (!(kbnode_get_srcdef (node, &id, &fname, &line))) {
       INCPTR (*nerrors);
-      KBERROR ("Failed to get node information\n");
+      KBXERROR ("Failed to get node information\n");
       return NULL;
    }
 
@@ -183,7 +183,7 @@ static struct djobs_t *node_find_dependent_jobs (const kbnode_t *node,
    // signal ensures that every emitted signal has at least one handler
    ds_array_t *handlers = ds_array_new ();
    if (!handlers) {
-      KBERROR ("OOM allocating new array\n");
+      KBIERROR ("OOM allocating new array\n");
       INCPTR (*nerrors);
       goto cleanup;
    }
@@ -211,7 +211,7 @@ static struct djobs_t *node_find_dependent_jobs (const kbnode_t *node,
 
       sighandlers = kbnode_filter_handlers (all, sigs);
       if (!sighandlers) {
-         KBERROR ("OOM filtering signals into array\n");
+         KBIERROR ("OOM filtering signals into array\n");
          INCPTR (*nerrors);
          goto cleanup;
       }
@@ -225,7 +225,7 @@ static struct djobs_t *node_find_dependent_jobs (const kbnode_t *node,
 
       for (size_t j=0; j<nsighandlers; j++) {
          if (!(ds_array_ins_tail (handlers, ds_array_get (sighandlers, j)))) {
-            KBERROR ("OOM inserting signal handler node into handlers\n");
+            KBIERROR ("OOM inserting signal handler node into handlers\n");
             INCPTR (*nerrors);
             goto cleanup;
          }
@@ -387,7 +387,7 @@ static kbnode_t *node_instantiate (const kbnode_t *src,
    // 2. Copy the symbol table (easier to just recreate it)
    kbsymtab_del (ret->symtab);
    if (!(ret->symtab = kbsymtab_copy (src->symtab))) {
-      KBERROR ("OOM creating new symbol table\n");
+      KBIERROR ("OOM creating new symbol table\n");
       INCPTR (*errors);
       goto cleanup;
    }
@@ -643,7 +643,7 @@ bool kbnode_read_file (ds_array_t *dst, const char *fname,
    char *name = NULL, *value = NULL;
 
    if (!(inf = fopen (fname, "r"))) {
-      KBERROR ("Failed to open [%s] for reading: %m\n", fname);
+      KBXERROR ("Failed to open [%s] for reading: %m\n", fname);
       *nerrors = (*nerrors) + 1;
       goto cleanup;
    }
@@ -719,7 +719,7 @@ bool kbnode_read_file (ds_array_t *dst, const char *fname,
          }
 
          if (!(ds_array_ins_tail (dst, current))) {
-            KBERROR ("OOM appending new node %s to collection\n", line);
+            KBIERROR ("OOM appending new node %s to collection\n", line);
             *nerrors = (*nerrors) + 1;
             goto cleanup;
          }
@@ -882,7 +882,7 @@ static char **collect_args (const char *a1, va_list ap)
    } while ((tmp = va_arg (ap, char *)));
 
    if (!(ret = calloc (nelements + 1, sizeof *ret))) {
-      KBERROR ("OOM error allocating array of %zu entries\n", nelements + 1);
+      KBIERROR ("OOM error allocating array of %zu entries\n", nelements + 1);
       va_end (ap2);
       return NULL;
    }
@@ -905,7 +905,7 @@ void kbnode_check (kbnode_t *node, size_t *errors, size_t *warnings)
    };
 
    if (!node) {
-      KBERROR ("NULL kbnode_t object found!\n");
+      KBXERROR ("NULL kbnode_t object found!\n");
       INCPTR(*errors);
       return;
    }
@@ -914,8 +914,8 @@ void kbnode_check (kbnode_t *node, size_t *errors, size_t *warnings)
    int64_t line = kbsymtab_get_int (node->symtab, KBNODE_KEY_LINE);
 
    if (!fname || line == LLONG_MAX) {
-      KBERROR ("No filename/line information for node [%s:%" PRIi64 "]\n",
-            fname, line);
+      KBXERROR ("No filename/line information for node [%s:%" PRIi64 "]\n",
+                fname, line);
       INCPTR(*warnings);
    }
 
@@ -969,7 +969,7 @@ kbnode_t *kbnode_instantiate (const kbnode_t *src, ds_array_t *all,
                               size_t *errors, size_t *warnings)
 {
    if (!src) {
-      KBERROR ("NULL node found\n");
+      KBXERROR ("NULL node found\n");
       INCPTR(*errors);
       return NULL;
    }

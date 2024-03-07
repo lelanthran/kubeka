@@ -14,13 +14,19 @@
 #define H_KBUTIL
 
 #define KBWARN(...)     do {\
-   fprintf (stderr, "[%s:%i] Warning in %s(): ", __FILE__, __LINE__, __func__);\
+   fprintf (stderr, "Warning: ");\
    fprintf (stderr, __VA_ARGS__);\
    fflush (stderr);\
 } while (0)
 
-#define KBERROR(...)     do {\
+#define KBIERROR(...)     do {\
    fprintf (stderr, "[%s:%i] Error in %s(): ", __FILE__, __LINE__, __func__);\
+   fprintf (stderr, __VA_ARGS__);\
+   fflush (stderr);\
+} while (0)
+
+#define KBXERROR(...)     do {\
+   fprintf (stderr, "Error: ");\
    fprintf (stderr, __VA_ARGS__);\
    fflush (stderr);\
 } while (0)

@@ -70,7 +70,7 @@ char *kbutil_strarray_format (const char **sa)
    const char *delim = "";
    for (size_t i=0; sa && sa[i]; i++) {
       if (!(ds_str_append (&ret, delim, sa[i], " ", NULL))) {
-         KBERROR ("OOM error formatting array\n");
+         KBIERROR ("OOM error formatting array\n");
          free (ret);
          return NULL;
       }
@@ -160,7 +160,7 @@ char **kbutil_strsplit (const char *src, char delim)
 {
    char *tmp = ds_str_dup (src);
    if (!tmp) {
-      KBERROR ("OOM error duplicating string [%s]\n", src);
+      KBIERROR ("OOM error duplicating string [%s]\n", src);
       return NULL;
    }
 
@@ -177,14 +177,14 @@ char **kbutil_strsplit (const char *src, char delim)
 
    char **ret = calloc (nitems, sizeof *ret);
    if (!ret) {
-      KBERROR ("OOM allocating result\n");
+      KBIERROR ("OOM allocating result\n");
       free (tmp);
       return NULL;
    }
 
    free (tmp);
    if (!(tmp = ds_str_dup (src))) {
-      KBERROR ("OOM duplicating string (twice) [%s]\n", src);
+      KBIERROR ("OOM duplicating string (twice) [%s]\n", src);
       free (ret);
       return NULL;
    }
@@ -195,7 +195,7 @@ char **kbutil_strsplit (const char *src, char delim)
    while ((tok = strtok_r (p1, delims, &saveptr))) {
       p1 = NULL;
       if (!(ret[i++] = ds_str_dup (tok))) {
-         KBERROR ("OOM copying token [%s]\n", tok);
+         KBIERROR ("OOM copying token [%s]\n", tok);
          kbutil_strarray_del (ret);
          free (tmp);
          return NULL;
@@ -217,13 +217,13 @@ char **kbutil_strarray_copy (const char **src)
    }
 
    if (!(ret = calloc (nitems, sizeof *ret))) {
-      KBERROR ("OOM creating string array\n");
+      KBIERROR ("OOM creating string array\n");
       goto cleanup;
    }
 
    for (size_t i=0; src && src[i]; i++) {
       if (!(ret[i] = ds_str_dup (src[i]))) {
-         KBERROR ("OOM creating string\n");
+         KBIERROR ("OOM creating string\n");
          goto cleanup;
       }
    }

@@ -85,7 +85,7 @@ static char **parse_value (const char *value)
 {
    char *copy = ds_str_dup (value);
    if (!copy) {
-      KBERROR ("OOM copying [%s]\n", value);
+      KBIERROR ("OOM copying [%s]\n", value);
       return NULL;
    }
 
@@ -133,7 +133,7 @@ void kbsymtab_dump (const kbsymtab_t *s, FILE *outf, size_t level)
       }
       free (tmp);
       if (!(tmp = kbutil_strarray_format (value))) {
-         KBERROR ("OOM trying to format array [%s]\n", keys[i]);
+         KBIERROR ("OOM trying to format array [%s]\n", keys[i]);
          goto cleanup;
       }
       INDENT;
@@ -185,28 +185,28 @@ kbsymtab_t *kbsymtab_copy (kbsymtab_t *st)
    char **keys = NULL;
 
    if (!(ret = kbsymtab_new ())) {
-      KBERROR ("OOM attempting to create new symbol table\n");
+      KBIERROR ("OOM attempting to create new symbol table\n");
       goto cleanup;
    }
 
    if (!(ds_hmap_keys (st->table, (void ***)&keys, NULL))) {
-      KBERROR ("OOM allocating keys\n");
+      KBIERROR ("OOM allocating keys\n");
       goto cleanup;
    }
 
    for (size_t i=0; keys && keys[i]; i++) {
       const char **srcvals = NULL;
       if (!(ds_hmap_get_str_ptr (st->table, keys[i], (void **)&srcvals, NULL))) {
-         KBERROR ("OOM getting source values\n");
+         KBIERROR ("OOM getting source values\n");
          goto cleanup;
       }
       char **dstvals = NULL;
       if (!(dstvals = kbutil_strarray_copy (srcvals))) {
-         KBERROR ("OOM creating dst values\n");
+         KBIERROR ("OOM creating dst values\n");
          goto cleanup;
       }
       if (!(ds_hmap_set_str_ptr (ret->table, keys[i], dstvals, 0))) {
-         KBERROR ("OOM storing dst values\n");
+         KBIERROR ("OOM storing dst values\n");
          goto cleanup;
       }
    }
@@ -513,7 +513,7 @@ bool kbsymtab_exists (kbsymtab_t *st, const char *key)
 
    const char **keys = NULL;
    if (!(ds_hmap_keys (st->table, (void ***)&keys, NULL))) {
-      KBERROR ("Failed to retrieve keys to search for '%s'\n", key);
+      KBIERROR ("Failed to retrieve keys to search for '%s'\n", key);
       return false;
    }
 

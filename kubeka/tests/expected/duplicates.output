@@ -20,7 +20,7 @@ Node [job] with parent [null]: 0x0
    ID: duplicates-1
    njobs: 0
    nhandlers: 0
-[src/kbtree.c:101] Error in kbtree_coalesce(): Failed to add duplicated node
+Error: Failed to add node (duplicate found)
 Aborting due to 2 errors
 Processing 1 kubeka files
 Reading tests/input/duplicates.kubeka ...

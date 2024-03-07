@@ -66,7 +66,7 @@ static bool kbbi_rollback (kbnode_t *node, size_t *nerrors, size_t *nwarnings)
    const char *id = NULL;
    size_t line;
    if (!(kbnode_get_srcdef (node, &id, &fname, &line))) {
-      KBERROR ("Node has no source file information");
+      KBXERROR ("Node has no source file information");
       INCPTR (*nerrors);
       return false;
    }
@@ -113,7 +113,7 @@ static int kbbi_run (kbnode_t *node, size_t *nerrors, size_t *nwarnings)
    bool done = false;
 
    if (!(kbnode_get_srcdef (node, &id, &fname, &line))) {
-      KBERROR ("Node has no source file information\n");
+      KBXERROR ("Node has no source file information\n");
       INCPTR (*nerrors);
       goto cleanup;
    }
@@ -126,7 +126,7 @@ static int kbbi_run (kbnode_t *node, size_t *nerrors, size_t *nwarnings)
                                                        signals);
    size_t nnodes = ds_array_length (handler_nodes);
    if (!handler_nodes) {
-      KBERROR ("OOM allocating handlers list\n");
+      KBIERROR ("OOM allocating handlers list\n");
       INCPTR (*nerrors);
       goto cleanup;
    } else {
@@ -211,7 +211,7 @@ int kbbi_launch (const char *node_id, ds_array_t *nodes,
 {
    kbnode_t *target = find_node (node_id, nodes);
    if (!target) {
-      KBERROR ("Node [%s] not found in tree\n", node_id);
+      KBXERROR ("Node [%s] not found in tree\n", node_id);
       INCPTR (*nerrors);
       return EXIT_FAILURE;
    }
@@ -236,7 +236,7 @@ KBBI_FUNC(bi_setenv)
 
    char **p = kbutil_strsplit (params, '=');
    if (!p) {
-      KBERROR ("OOM splitting params [%s]\n", params);
+      KBIERROR ("OOM splitting params [%s]\n", params);
       INCPTR (*nerrors);
       return NULL;
    }

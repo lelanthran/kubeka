@@ -39,7 +39,7 @@ int kbexec_shell (const char *node_fname, size_t node_line,
    *dstlen = 0;
    size_t index = 0;
    if (!(resize_buffer (dst, dstlen, index))) {
-      KBERROR ("Failed to resize array");
+      KBIERROR ("Failed to resize array");
       goto cleanup;
    }
    (*dst)[0] = 0;
@@ -47,8 +47,8 @@ int kbexec_shell (const char *node_fname, size_t node_line,
    int c;
    while ((c = fgetc (inp)) != EOF) {
       if (!(resize_buffer (dst, dstlen, index))) {
-         KBERROR ("OOM reallocating %zu bytes when executing [%s]\n",
-                  index, command);
+         KBIERROR ("OOM reallocating %zu bytes when executing [%s]\n",
+                   index, command);
          goto cleanup;
       }
       (*dst)[index] = (char)c;

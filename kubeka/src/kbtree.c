@@ -31,7 +31,7 @@ static void array_push (const void *node, size_t len, void *array)
    (void)len;
    ds_array_t *a = array;
    if (!(ds_array_ins_tail (a, (void *)node))) {
-      KBERROR ("Error inserting node into array (full node dump follows)\n");
+      KBIERROR ("Error inserting node into array (full node dump follows)\n");
       kbnode_dump (node, stderr, 0);
    }
 }
@@ -54,7 +54,7 @@ ds_array_t *kbtree_coalesce (ds_array_t *nodes, size_t *nduplicates,
    }
 
    if (!(set = ds_set_new (cmpnode, nnodes))) {
-      KBERROR ("OOM error creating set for nodes.\n");
+      KBIERROR ("OOM error creating set for nodes.\n");
       *nerrors = (*nerrors) + 1;
       return NULL;
    }
@@ -74,8 +74,8 @@ ds_array_t *kbtree_coalesce (ds_array_t *nodes, size_t *nduplicates,
                                   &existing_src_line))
                || !(kbnode_get_srcdef (node, &node_id, &node_src_fname,
                                        &node_src_line))) {
-            KBERROR ("Failed to retrieve file/line number information for duplicate"
-                     " nodes, aborting\n");
+            KBIERROR ("Failed to retrieve file/line number information for duplicate"
+                      " nodes, aborting\n");
             *nerrors = (*nerrors) + 1;
             goto cleanup;
          }
@@ -94,11 +94,11 @@ ds_array_t *kbtree_coalesce (ds_array_t *nodes, size_t *nduplicates,
       }
       int added = ds_set_add (set, node, 0);
       if (added < 0) {
-         KBERROR ("Failed to add following node to set of all nodes\n");
+         KBIERROR ("Failed to add following node to set of all nodes\n");
          kbnode_dump (node, stderr, 0);
       }
       if (added == 0) {
-         KBERROR ("Failed to add duplicated node\n");
+         KBXERROR ("Failed to add node (duplicate found)\n");
       }
    }
 
@@ -116,7 +116,7 @@ cleanup:
 
    ds_array_t *ret = ds_array_new ();
    if (!ret) {
-      KBERROR ("OOM creating deduplicated list\n");
+      KBIERROR ("OOM creating deduplicated list\n");
       return NULL;
    }
 
@@ -262,7 +262,7 @@ void kbtree_eval (kbnode_t *root, size_t *nerrors, size_t *nwarnings)
 
    for (size_t i=0; keys[i]; i++) {
       if (!(kbnode_get_srcdef (root, &id, &fname, &line))) {
-         KBERROR ("Failed to get node filename and line number information\n");
+         KBXERROR ("Failed to get node filename and line number information\n");
          INCPTR (*nerrors);
          goto cleanup;
       }
@@ -294,7 +294,7 @@ void kbtree_eval (kbnode_t *root, size_t *nerrors, size_t *nwarnings)
             free (resolved);
             resolved = NULL;
             if (!tmp) {
-               KBERROR ("OOM performing substitution\n");
+               KBIERROR ("OOM performing substitution\n");
                break;
             }
             free (newvalue);
