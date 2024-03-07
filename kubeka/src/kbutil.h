@@ -63,7 +63,6 @@ extern "C" {
    char **kbutil_strarray_append (char ***dst, char *s);
    char **kbutil_strarray_copy (const char **src);
 
-
 #ifdef __cplusplus
 };
 #endif

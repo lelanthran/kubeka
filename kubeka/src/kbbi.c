@@ -3,6 +3,10 @@
 #include <stdio.h>
 #include <stdint.h>
 #include <errno.h>
+#include <signal.h>
+
+#include <pthread.h>
+#include <unistd.h>
 
 
 #include "ds_array.h"
@@ -12,6 +16,7 @@
 #include "kbbi.h"
 #include "kbutil.h"
 #include "kbexec.h"
+#include "kbperiod.h"
 
 
 #define INCPTR(x)    do {\
@@ -276,4 +281,139 @@ KBBI_FUNC(bi_getenv)
    return ds_str_dup (value);
 }
 
+
+
+void *th_periodic (void *params)
+{
+   struct kbbi_thread_t *p = params;
+   const char *id = "no-id", *fname = "no-fname";
+   size_t line = 0;
+
+   if (!(kbnode_get_srcdef (p->root, &id, &fname, &line))) {
+      KBXERROR ("Failed to get node source file information\n");
+      return NULL;
+   }
+
+   const char *period_value = kbnode_getvalue_first (p->root, KBNODE_KEY_PERIOD);
+   const char *counter_value = kbnode_getvalue_first (p->root, KBNODE_KEY_COUNTER);
+
+   if (!period_value || !period_value[0]) {
+      KBPARSE_ERROR (fname, line, "Node [%s] has no value for PERIOD\n", id);
+      return NULL;
+   }
+
+
+   size_t counter = (size_t)-1;
+   if (counter_value && counter_value[0]) {
+      if ((sscanf (counter_value, "%zu", &counter)) != 1) {
+         KBPARSE_ERROR (fname, line, "Node [%s] has invalid value for COUNTER\n",
+                  id);
+         return NULL;
+      }
+   }
+
+
+   kbperiod_t *period = kbperiod_parse (period_value);
+   if (!period) {
+      KBPARSE_ERROR (fname, line, "Node [%s] has invalid PERIOD value\n", id);
+      return NULL;
+   }
+
+   size_t nerrors = 0, nwarnings = 0;
+   int ret = EXIT_FAILURE;
+   while (*p->endflag == 0) {
+
+      if (counter == 0) {
+         break;
+      }
+
+      sleep (1);
+
+      if ((kbperiod_remaining (period)) != 0) {
+         continue;
+      }
+
+      kbperiod_reset (period);
+
+      // Special exception here - if counter was specified, we decrement it
+      // and exit when we hit zero
+      if (counter != (size_t)-1) {
+         counter--;
+         char tmp[45];
+         snprintf (tmp, sizeof tmp, "%zu", counter);
+         if (!(kbnode_set_single (p->root, KBNODE_KEY_COUNTER, 0, tmp))) {
+            KBIERROR (
+                  "Failed to set new counter value. Scripts will have incorrect\n"
+                  "values for counter. Other than the incorrect values, the number\n"
+                  "of iterations will be correct\n");
+         }
+      }
+
+      if ((ret = kbbi_run (p->root, &nerrors, &nwarnings)) != EXIT_SUCCESS) {
+         KBPARSE_ERROR (fname, line, "Node [%s] failed to run [error %zu]\n",
+                  id, nerrors);
+         nerrors++;
+         if (nerrors > 10) {
+            break;
+         }
+      } else {
+         nerrors = 0;
+      }
+   }
+
+   KBIERROR ("Shutting down thread %i with return code: %i\n",
+            (int)p->tid, ret);
+   p->completed = true;
+   p->retcode = ret;
+   kbperiod_del (period);
+   return NULL;
+}
+
+
+bool kbbi_thread_launch (struct kbbi_thread_t *th)
+{
+   bool error = true;
+   th->retcode = EXIT_FAILURE;
+   th->completed = false;
+   th->tid = (pthread_t)-1;
+
+   pthread_attr_t attr;
+   int rc = pthread_attr_init (&attr);
+   if (rc != 0) {
+      KBIERROR ("Failed to initialise thread attribute\n");
+      goto cleanup;
+   }
+   if ((pthread_attr_setdetachstate (&attr, 1)) != 0) {
+      KBIERROR ("Failed to set thread to detached state\n");
+      goto cleanup;
+   }
+
+
+   switch (kbnode_type (th->root)) {
+      case kbnode_type_PERIODIC:
+         rc = pthread_create ((pthread_t *)&th->tid, &attr, th_periodic, th);
+         break;
+
+      case kbnode_type_JOB:
+      case kbnode_type_ENTRYPOINT:
+      case kbnode_type_UNKNOWN:
+      default:
+         KBIERROR ("Unrecognised node type %i\n", kbnode_type (th->root));
+         rc = -1;
+   }
+   if (rc != 0) {
+      KBIERROR ("Failed to start thread\n");
+      goto cleanup;
+   }
+
+   error = false;
+cleanup:
+   pthread_attr_destroy (&attr);
+   return !error;
+}
+
+void kbbi_thread_cancel (struct kbbi_thread_t *th)
+{
+   pthread_cancel (th->tid);
+}
 

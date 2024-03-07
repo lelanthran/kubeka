@@ -26,6 +26,7 @@
 #include "ds_str.h"
 
 #include "kbnode.h"
+#include "kbperiod.h"
 #include "kbsym.h"
 #include "kbutil.h"
 
@@ -46,24 +47,17 @@ enum childtype_t {
    childtype_HANDLER,
 };
 
-enum node_type_t {
-   node_type_UNKNOWN = 0,
-   node_type_PERIODIC,
-   node_type_JOB,
-   node_type_ENTRYPOINT,
-};
-
 static const struct {
-   enum node_type_t type;
+   enum kbnode_type_t type;
    const char *name;
 } node_type_names[] = {
-   { node_type_UNKNOWN,       "unknown node type"     },
-   { node_type_PERIODIC,      KBNODE_TYPE_PERIODIC    },
-   { node_type_JOB,           KBNODE_TYPE_JOB         },
-   { node_type_ENTRYPOINT,    KBNODE_TYPE_ENTRYPOINT  },
+   { kbnode_type_UNKNOWN,       "unknown node type"     },
+   { kbnode_type_PERIODIC,      KBNODE_TYPE_PERIODIC    },
+   { kbnode_type_JOB,           KBNODE_TYPE_JOB         },
+   { kbnode_type_ENTRYPOINT,    KBNODE_TYPE_ENTRYPOINT  },
 };
 
-static const char *node_type_name (enum node_type_t type)
+static const char *node_type_name (enum kbnode_type_t type)
 {
 
    static char unknown[45];
@@ -77,18 +71,18 @@ static const char *node_type_name (enum node_type_t type)
    return unknown;
 }
 
-static enum node_type_t node_type_type (const char *name)
+static enum kbnode_type_t node_type_type (const char *name)
 {
    for (size_t i=0; i<sizeof node_type_names / sizeof node_type_names[0]; i++) {
       if ((strcmp (node_type_names[i].name, name)) == 0) {
          return node_type_names[i].type;
       }
    }
-   return node_type_UNKNOWN;
+   return kbnode_type_UNKNOWN;
 }
 
 struct kbnode_t {
-   enum node_type_t type;
+   enum kbnode_type_t type;
    kbsymtab_t *symtab;
    kbnode_t *parent;
    ds_array_t *jobs;
@@ -294,13 +288,13 @@ static kbnode_t *node_new (const char *fname, size_t line,
                            kbnode_t *parent, enum childtype_t childtype)
 {
    bool error = true;
-   enum node_type_t type = node_type_type (typename);
+   enum kbnode_type_t type = node_type_type (typename);
    char sline[45];
    kbnode_t *ret = NULL;
 
    snprintf (sline, sizeof sline, "%zu", line);
 
-   if (type == node_type_UNKNOWN) {
+   if (type == kbnode_type_UNKNOWN) {
       KBPARSE_ERROR (fname, line,
             "Attempt to create node of unknown type: '%s'\n", typename);
       goto cleanup;
@@ -513,6 +507,11 @@ void kbnode_flags_set (kbnode_t *node, uint64_t flags)
    node->flags = flags;
 }
 
+enum kbnode_type_t kbnode_type (const kbnode_t *node)
+{
+   return node ? node->type : kbnode_type_UNKNOWN;
+}
+
 void kbnode_dump (const kbnode_t *node, FILE *outf, size_t level)
 {
 #define INDENT(l)    for (size_t i=0; i<((l) * 3); i++) fputc (' ', outf)
@@ -607,7 +606,7 @@ const char **kbnode_getvalue_all (const kbnode_t *node, const char *key)
 }
 
 bool kbnode_set_single (kbnode_t *node, const char *key, size_t index,
-                        char *newvalue)
+                        const char *newvalue)
 {
    const char **values = kbsymtab_get (node->symtab, key);
    if (!values || !values[0]) {
@@ -619,8 +618,8 @@ bool kbnode_set_single (kbnode_t *node, const char *key, size_t index,
    }
 
    free ((void *)values[index]);
-   values[index] = newvalue;
-   return true;
+   values[index] = ds_str_dup (newvalue);
+   return values[index] ? true : false;
 }
 
 
@@ -833,7 +832,7 @@ static bool node_filter_func_types (const void *element, void *param)
    const char **types = param;
 
    for (size_t i=0; types && types[i]; i++) {
-      enum node_type_t type = node_type_type (types[i]);
+      enum kbnode_type_t type = node_type_type (types[i]);
       if (node->type == type) {
          return true;
       }
@@ -912,30 +911,6 @@ static void nc_job (const kbnode_t *node,
    (void)warnings;
 }
 
-static bool period_suffix (const char *src)
-{
-   // TODO, this should actuall parse and return the entire value
-   if (src[1] == 0) {
-      return strchr ("smhdwM", src[0]) ? true : false;
-   }
-   static const char *suffixes[] = {
-      "sec", "secs", "second", "seconds",
-      "min", "mins", "minute", "minutes",
-      "hr", "hrs", "hour", "hours",
-      "day", "days",
-      "wk", "wks", "week", "weeks",
-      "month", "months",
-   };
-
-   for (size_t i=0; i<sizeof suffixes/sizeof suffixes[0]; i++) {
-      if ((strcmp (src, suffixes[i])) == 0) {
-         return true;
-      }
-   }
-
-   return false;
-}
-
 static void nc_periodic (const kbnode_t *node,
                          const char *id, const char *fname, size_t line,
                          size_t *errors, size_t *warnings)
@@ -958,8 +933,7 @@ static void nc_periodic (const kbnode_t *node,
       INCPTR(*errors);
    }
 
-   const char *tmp = periods[0];
-   if (!tmp) {
+   if (!periods[0]) {
       KBPARSE_ERROR (fname, line,
                "[periodic] node [%s] has empty value for variable PERIOD\n",
                id);
@@ -967,23 +941,35 @@ static void nc_periodic (const kbnode_t *node,
       return;
    }
 
-   size_t ndigits = 0;
-   while ((isdigit (*tmp))) {
-      tmp++;
-      ndigits++;
-   }
-   if (!ndigits) {
-      KBPARSE_ERROR (fname, line, "node [%s] PERIOD has invalid value [%s]\n",
+   kbperiod_t *kbp = kbperiod_parse (periods[0]);
+   if (!kbp) {
+      KBPARSE_ERROR (fname, line,
+               "[periodic] node [%s] has invalid value for PERIOD variable: [%s]\n",
                id, periods[0]);
       INCPTR (*errors);
    }
-   if (!(period_suffix (tmp))) {
-      KBPARSE_ERROR (fname, line, "node [%s]: unrecognised  periodic suffix [%s]\n",
-               id, tmp);
+   kbperiod_del (kbp);
+
+   const char **counters = kbsymtab_get (node->symtab, KBNODE_KEY_COUNTER);
+   size_t ncounters = kbutil_strarray_length (counters);
+   if (ncounters == 0) {
+      return;
+   }
+   if (ncounters > 1) {
+      KBPARSE_ERROR (fname, line,
+               "[periodic] node [%s] has multiple values for COUNTER variable\n",
+               id);
       INCPTR (*errors);
    }
 
-   // try to parse this, and increment *errors if unable to parse
+   size_t counter;
+   if ((sscanf (counters[0], "%zu", &counter)) != 1) {
+      KBPARSE_ERROR (fname, line,
+               "[periodic] node [%s]: cannot parse [%s] as a valid COUNTER value\n",
+               id, counters[0]);
+      INCPTR (*errors);
+   }
+
 }
 
 static void nc_entrypoint (const kbnode_t *node,
@@ -1024,19 +1010,19 @@ void kbnode_check (kbnode_t *node, size_t *errors, size_t *warnings)
    // Check that the node type is one of the valid ones, and for each type
    // perform a type-specific check.
    switch (node->type) {
-      case node_type_JOB:
+      case kbnode_type_JOB:
          nc_job (node, id, fname, line, errors, warnings);
          break;
 
-      case node_type_PERIODIC:
+      case kbnode_type_PERIODIC:
          nc_periodic (node, id, fname, line, errors, warnings);
          break;
 
-      case node_type_ENTRYPOINT:
+      case kbnode_type_ENTRYPOINT:
          nc_entrypoint (node, id, fname, line, errors, warnings);
          break;
 
-      case node_type_UNKNOWN:
+      case kbnode_type_UNKNOWN:
       default:
          KBPARSE_ERROR (fname, line, "Node [%s] has unknown type: %i/%s\n",
                   id, node->type, node_type_name (node->type));

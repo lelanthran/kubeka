@@ -59,7 +59,9 @@ run_daemon() {
       rm -f vg.txt
       $PROG --daemon \
          -f  tests/input/$1.kubeka \
-         &> tests/output/$1.output && eval $2
+         &> tests/output/$1.output || failed
+      sleep 5s
+      kill -INT `cat /tmp/kubeka.pid | cut -f 2 -d :` &> /dev/null
       diff tests/expected/$1.output tests/output/$1.output || failed
    fi
 }

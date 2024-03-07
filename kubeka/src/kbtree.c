@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <stdint.h>
+#include <signal.h>
 
 #include "ds_array.h"
 #include "ds_set.h"
@@ -230,6 +231,12 @@ void kbtree_eval (kbnode_t *root, size_t *nerrors, size_t *nwarnings)
    const char *id;
    size_t line;
 
+   if (!(kbnode_get_srcdef (root, &id, &fname, &line))) {
+      KBXERROR ("Failed to get node filename and line number information\n");
+      INCPTR (*nerrors);
+      goto cleanup;
+   }
+
    if (!keys) {
       KBPARSE_ERROR (fname, line, "Failed to get node symbols\n");
       INCPTR (*nerrors);
@@ -308,6 +315,8 @@ void kbtree_eval (kbnode_t *root, size_t *nerrors, size_t *nwarnings)
          }
 
          kbnode_set_single (root, keys[i], j, newvalue);
+         free (newvalue);
+         newvalue = NULL;
       }
    }
 

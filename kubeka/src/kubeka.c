@@ -45,7 +45,7 @@
    fflush (stderr);\
 } while (0);
 
-static sig_atomic_t g_endloop = 0;
+static volatile sig_atomic_t g_endloop = 0;
 static void sigh (int n)
 {
    if (n == SIGINT) {
@@ -262,7 +262,7 @@ int main (int argc, char **argv)
    ds_array_t *dedup_nodes = NULL;
    ds_array_t *entrypoints = NULL;
    ds_array_t *trees = NULL;
-   ds_array_t *threads = NULL;
+   struct kbbi_thread_t *threads = NULL;
 
 
    /* ***********************************************************************
@@ -360,6 +360,7 @@ int main (int argc, char **argv)
             goto cleanup;
          }
          if (pid > 0) {
+            sleep (1);
             FILE *pidfile = fopen (PIDFILE, "w");
             if (!pidfile) {
                XERROR ("Failed to open [%s] for writing: %m\n", PIDFILE);
@@ -595,10 +596,6 @@ int main (int argc, char **argv)
 
    // If no entrypoint specified, start a thread for each entrypoint
    if (opt_daemon) {
-      if (!(threads = ds_array_new ())) {
-         IERROR ("OOM creating threads array\n");
-         goto cleanup;
-      }
 
       // Wait for SIGINT to tell us to exit
       if ((signal (SIGINT, sigh) == SIG_ERR)) {
@@ -613,13 +610,36 @@ int main (int argc, char **argv)
          goto cleanup;
       }
 
-      while (!g_endloop) {
-         // Do nothing
+      // Start all the threads, and record their thread IDs
+      if (!(threads = calloc (ntrees + 1, sizeof *threads))) {
+         IERROR ("OOM allocating threads array\n");
+         goto cleanup;
+      }
+      for (size_t i=0; i<ntrees; i++) {
+         threads[i].root = ds_array_get (trees, i);
+         threads[i].endflag = &g_endloop;
+         threads[i].retcode = EXIT_FAILURE;
+         threads[i].completed = false;
+
+         if (!(kbbi_thread_launch (&threads[i]))) {
+            IERROR ("Failed to launch thread %zu\n", i); // TODO: Use node name
+            goto cleanup;
+         }
       }
 
-      // Tell all threads to end
+      while (g_endloop == 0) {
+         sleep (1);
+      }
 
       // Wait for all threads to end
+      for (size_t i=0; i<ntrees; i++) {
+         while (!threads[i].completed) {
+            // Do nothing
+            sleep (1);
+         }
+
+      }
+
       ret = EXIT_SUCCESS;
    }
 
@@ -636,7 +656,7 @@ cleanup:
    ds_array_del (entrypoints);
    ds_array_fptr (trees, (void (*) (void *))kbnode_del);
    ds_array_del (trees);
-   ds_array_del (threads);
+   free (threads);
 
    if (ret != EXIT_SUCCESS) {
       ret = EXIT_FAILURE;

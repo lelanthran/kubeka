@@ -14,6 +14,13 @@
 
 typedef struct kbnode_t kbnode_t;
 
+enum kbnode_type_t {
+   kbnode_type_UNKNOWN = 0,
+   kbnode_type_PERIODIC,
+   kbnode_type_JOB,
+   kbnode_type_ENTRYPOINT,
+};
+
 #define KBNODE_TYPE_PERIODIC     "periodic"
 #define KBNODE_TYPE_JOB          "job"
 #define KBNODE_TYPE_ENTRYPOINT   "entrypoint"
@@ -28,6 +35,7 @@ typedef struct kbnode_t kbnode_t;
 #define KBNODE_KEY_HANDLES    "HANDLES"
 #define KBNODE_KEY_ROLLBACK   "ROLLBACK"
 #define KBNODE_KEY_PERIOD     "PERIOD"
+#define KBNODE_KEY_COUNTER    "COUNTER"
 
 #define KBNODE_FLAG_INSTANTIATED    (1 >> 0)
 
@@ -41,6 +49,9 @@ extern "C" {
    // Get and set the flags for the specified node
    uint64_t kbnode_flags (kbnode_t *node);
    void kbnode_flags_set (kbnode_t *node, uint64_t flags);
+
+   // Get the node type.
+   enum kbnode_type_t kbnode_type (const kbnode_t *node);
 
    // Write the node out to the file descriptor provided (used during development)
    void kbnode_dump (const kbnode_t *node, FILE *outf, size_t level);
@@ -73,8 +84,9 @@ extern "C" {
    // returned array, nor any element of that array.
    const char **kbnode_getvalue_all (const kbnode_t *node, const char *key);
 
+   // The existing value in key[index] is replaced with a copy of newvalue.
    bool kbnode_set_single (kbnode_t *node, const char *key, size_t index,
-                           char *newvalue);
+                           const char *newvalue);
 
    // Caller must ensure that *dst is initialised with ds_array_new(). The number of
    // errors is stored in `nerrors` and the number of warnings is stored in

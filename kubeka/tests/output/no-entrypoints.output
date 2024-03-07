@@ -1,6 +1,4 @@
 Failed to open directory [/etc/kubeka] for reading: No such file or directory
-Detached process created (PID written to [/tmp/kubeka.pid])
-::EXITCODE:0
 Warning: No entrypoint nodes found, exiting
 Daemon recent/bin/kubeka.elf started with pid 0
 Processing 1 kubeka files
@@ -10,4 +8,6 @@ Found 0 entrypoint nodes
 Linting complete.
 Found 0 errors and 0 warnings
 Found 4 nodes (0 runnable)
+::EXITCODE:0
+Detached process created (PID written to [/tmp/kubeka.pid])
 ::EXITCODE:0

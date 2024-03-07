@@ -1,0 +1,27 @@
+Failed to open directory [/etc/kubeka] for reading: No such file or directory
+Instantiating [periodic-1] as child of [NULL]
+Detached process created (PID written to [/tmp/kubeka.pid])
+::EXITCODE:0
+[src/kbbi.c:364] Error in th_periodic(): Shutting down thread 91821632 with return code: 0
+Daemon recent/bin/kubeka.elf started with pid 0
+Processing 1 kubeka files
+Reading tests/input/happy-periodic.kubeka ...
+Checking for duplicates ... none
+Found 1 entrypoint nodes
+Node [periodic-1]: 0 errors, 0 warnings
+Linting complete.
+Found 0 errors and 0 warnings
+Found 1 nodes (1 runnable)
+::STARTING:periodic-1:periodic
+::COMMAND:echo "counter = 2 at `date`" && /bin/true:0:64 bytes
+-----
+counter = 2 at Thu 07 Mar 2024 22:58:24 SAST
+
+-----
+::STARTING:periodic-1:periodic
+::COMMAND:echo "counter = 2 at `date`" && /bin/true:0:64 bytes
+-----
+counter = 2 at Thu 07 Mar 2024 22:58:25 SAST
+
+-----
+::EXITCODE:0
