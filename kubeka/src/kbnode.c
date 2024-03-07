@@ -456,8 +456,8 @@ cleanup:
 
 static bool parse_nv (char **name, char **value, char *line, const char *delim)
 {
-   // TODO: All occurrences of `strchr()` must be replaced with
-   // mystrchr which returns the first non-escaped character.
+   // TODO: Replace this with smart strchr/strstr, one which ignores
+   // characters in quotes of any kind, and permits escaped characters.
    char *tmp = strstr (line, delim);
    if (!tmp) {
       return false;
@@ -660,6 +660,8 @@ bool kbnode_read_file (ds_array_t *dst, const char *fname,
 
    while (!feof (inf) && !ferror (inf) && fgets (line, line_len, inf)) {
       lc++;
+      // TODO: Replace this with smart strchr/strstr, one which ignores
+      // characters in quotes of any kind, and permits escaped characters.
       if ((tmp = strchr (line, '\r'))) {
          KBPARSE_ERROR (fname, lc,
                "Carriage return (\\r) detected on line %zu\n", lc);
@@ -678,10 +680,9 @@ bool kbnode_read_file (ds_array_t *dst, const char *fname,
       }
       *tmp = 0;
 
-      // TODO: All occurrences of `strchr()` must be replaced with
-      // mystrchr which returns the first non-escaped character.
+      // TODO: Replace this with smart strchr/strstr, one which ignores
+      // characters in quotes of any kind, and permits escaped characters.
       if ((tmp = strchr (line, '#'))) {
-         // TODO: Check for escaped character
          *tmp = 0;
       }
       ds_str_trim (line);
@@ -701,8 +702,8 @@ bool kbnode_read_file (ds_array_t *dst, const char *fname,
       // Do we have a new node
       if (line[0] == '[') {
 
-         // TODO: All occurrences of `strchr()` must be replaced with
-         // mystrchr which returns the first non-escaped character.
+         // TODO: Replace this with smart strchr/strstr, one which ignores
+         // characters in quotes of any kind, and permits escaped characters.
          char *tmp = strchr (line, ']');
          if (!tmp) {
             KBPARSE_ERROR (fname, lc, "Mangled input [%s]\n", line);
@@ -762,8 +763,9 @@ bool kbnode_read_file (ds_array_t *dst, const char *fname,
          continue;
       }
 
-      // TODO: All occurrences of `strchr()` must be replaced with
-      // mystrchr which returns the first non-escaped character.
+      // TODO: Replace this with smart strchr/strstr, one which ignores
+      // characters in quotes of any kind, and permits escaped characters.
+
       // Perform a simple assignment/creation/replacement
       if ((strchr (line, '='))) {
          if (!(parse_nv (&name, &value, line, "="))) {
@@ -898,32 +900,155 @@ static char **collect_args (const char *a1, va_list ap)
    return ret;
 }
 
+static void nc_job (const kbnode_t *node,
+                    const char *id, const char *fname, size_t line,
+                    size_t *errors, size_t *warnings)
+{
+   (void)node;
+   (void)id;
+   (void)fname;
+   (void)line;
+   (void)errors;
+   (void)warnings;
+}
+
+static bool period_suffix (const char *src)
+{
+   // TODO, this should actuall parse and return the entire value
+   if (src[1] == 0) {
+      return strchr ("smhdwM", src[0]) ? true : false;
+   }
+   static const char *suffixes[] = {
+      "sec", "secs", "second", "seconds",
+      "min", "mins", "minute", "minutes",
+      "hr", "hrs", "hour", "hours",
+      "day", "days",
+      "wk", "wks", "week", "weeks",
+      "month", "months",
+   };
+
+   for (size_t i=0; i<sizeof suffixes/sizeof suffixes[0]; i++) {
+      if ((strcmp (src, suffixes[i])) == 0) {
+         return true;
+      }
+   }
+
+   return false;
+}
+
+static void nc_periodic (const kbnode_t *node,
+                         const char *id, const char *fname, size_t line,
+                         size_t *errors, size_t *warnings)
+{
+   (void)warnings;
+   const char **periods = kbsymtab_get (node->symtab, KBNODE_KEY_PERIOD);
+   size_t nperiods = kbutil_strarray_length (periods);
+
+   if (nperiods == 0) {
+      KBPARSE_ERROR (fname, line,
+               "[periodic] node [%s] does not specify any periods\n", id);
+      INCPTR (*errors);
+      return;
+   }
+
+   if (nperiods > 1) {
+      KBPARSE_ERROR (fname, line,
+               "[periodic] node [%s] has multiple periods. Only one is allowed.\n",
+               id);
+      INCPTR(*errors);
+   }
+
+   const char *tmp = periods[0];
+   if (!tmp) {
+      KBPARSE_ERROR (fname, line,
+               "[periodic] node [%s] has empty value for variable PERIOD\n",
+               id);
+      INCPTR (*errors);
+      return;
+   }
+
+   size_t ndigits = 0;
+   while ((isdigit (*tmp))) {
+      tmp++;
+      ndigits++;
+   }
+   if (!ndigits) {
+      KBPARSE_ERROR (fname, line, "node [%s] PERIOD has invalid value [%s]\n",
+               id, periods[0]);
+      INCPTR (*errors);
+   }
+   if (!(period_suffix (tmp))) {
+      KBPARSE_ERROR (fname, line, "node [%s]: unrecognised  periodic suffix [%s]\n",
+               id, tmp);
+      INCPTR (*errors);
+   }
+
+   // try to parse this, and increment *errors if unable to parse
+}
+
+static void nc_entrypoint (const kbnode_t *node,
+                           const char *id, const char *fname, size_t line,
+                           size_t *errors, size_t *warnings)
+{
+   (void)node;
+   (void)id;
+   (void)fname;
+   (void)line;
+   (void)errors;
+   (void)warnings;
+}
+
 void kbnode_check (kbnode_t *node, size_t *errors, size_t *warnings)
 {
    static const char *required[] = {
       KBNODE_KEY_ID, KBNODE_KEY_MESSAGE,
    };
 
+   // Check for NULL-ness
    if (!node) {
       KBXERROR ("NULL kbnode_t object found!\n");
       INCPTR(*errors);
       return;
    }
 
-   const char *fname = kbsymtab_get_string (node->symtab, KBNODE_KEY_FNAME);
-   int64_t line = kbsymtab_get_int (node->symtab, KBNODE_KEY_LINE);
+   // Ensure that node has fname, id and line number information.
+   const char *fname = "fname-missing";
+   const char *id = "id-missing";
+   size_t line = 0;
 
-   if (!fname || line == LLONG_MAX) {
-      KBXERROR ("No filename/line information for node [%s:%" PRIi64 "]\n",
-                fname, line);
-      INCPTR(*warnings);
+   if (!(kbnode_get_srcdef (node, &id, &fname, &line))) {
+      KBXERROR ("Node missing id/fname/line: [%s:%s:%zu]\n", id, fname, line);
+      INCPTR (*warnings);
+   }
+
+   // Check that the node type is one of the valid ones, and for each type
+   // perform a type-specific check.
+   switch (node->type) {
+      case node_type_JOB:
+         nc_job (node, id, fname, line, errors, warnings);
+         break;
+
+      case node_type_PERIODIC:
+         nc_periodic (node, id, fname, line, errors, warnings);
+         break;
+
+      case node_type_ENTRYPOINT:
+         nc_entrypoint (node, id, fname, line, errors, warnings);
+         break;
+
+      case node_type_UNKNOWN:
+      default:
+         KBPARSE_ERROR (fname, line, "Node [%s] has unknown type: %i/%s\n",
+                  id, node->type, node_type_name (node->type));
+         INCPTR (*errors);
    }
 
    // Ensure that the mandatory keys exist
    for (size_t i=0; i<sizeof required/sizeof required[0]; i++) {
       if (!(kbsymtab_exists (node->symtab, required[i]))) {
-         KBPARSE_WARN (fname, line, "Missing required key '%s'\n", required[i]);
-         INCPTR(*warnings);
+         KBPARSE_WARN (fname, line, "Node [%s] missing required key '%s'\n",
+                  id, required[i]);
+         INCPTR (*errors);
       }
    }
 

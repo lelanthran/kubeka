@@ -27,6 +27,7 @@ typedef struct kbnode_t kbnode_t;
 #define KBNODE_KEY_EMITS      "EMITS"
 #define KBNODE_KEY_HANDLES    "HANDLES"
 #define KBNODE_KEY_ROLLBACK   "ROLLBACK"
+#define KBNODE_KEY_PERIOD     "PERIOD"
 
 #define KBNODE_FLAG_INSTANTIATED    (1 >> 0)
 

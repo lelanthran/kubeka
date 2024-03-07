@@ -1,0 +1,25 @@
+Failed to open directory [/etc/kubeka] for reading: No such file or directory
+Error in tests/input/periodic-missing-period.kubeka:1: [periodic] node [periodic-missing-period-1] does not specify any periods
+Error in tests/input/periodic-missing-period.kubeka:6: node [periodic-missing-period-2]: unrecognised  periodic suffix [dayz]
+Error in tests/input/periodic-missing-period.kubeka:12: [periodic] node [periodic-missing-period-3] has multiple periods. Only one is allowed.
+Error in tests/input/periodic-missing-period.kubeka:18: node [periodic-missing-period-4] PERIOD has invalid value [second1]
+Error in tests/input/periodic-missing-period.kubeka:18: node [periodic-missing-period-4]: unrecognised  periodic suffix [second1]
+Instantiating [periodic-missing-period-1] as child of [NULL]
+Instantiating [periodic-missing-period-2] as child of [NULL]
+Instantiating [periodic-missing-period-3] as child of [NULL]
+Instantiating [periodic-missing-period-4] as child of [NULL]
+Instantiating [periodic-missing-period-5] as child of [NULL]
+Aborting due to 5 errors
+Processing 1 kubeka files
+Reading tests/input/periodic-missing-period.kubeka ...
+Checking for duplicates ... none
+Found 5 entrypoint nodes
+Node [periodic-missing-period-1]: 0 errors, 0 warnings
+Node [periodic-missing-period-2]: 0 errors, 0 warnings
+Node [periodic-missing-period-3]: 0 errors, 0 warnings
+Node [periodic-missing-period-4]: 0 errors, 0 warnings
+Node [periodic-missing-period-5]: 0 errors, 0 warnings
+Linting complete.
+Found 5 errors and 0 warnings
+Found 5 nodes (5 runnable)
+::EXITCODE:1

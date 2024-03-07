@@ -1,0 +1,29 @@
+[periodic]
+ID = periodic-missing-period-1
+MESSAGE = A - The message
+EXEC = /bin/true
+
+[periodic]
+ID = periodic-missing-period-2
+MESSAGE = B - The message
+PERIOD = 1dayz
+EXEC = /bin/true
+
+[periodic]
+ID = periodic-missing-period-3
+MESSAGE = C - The message
+PERIOD = [ 1s, 1d ]
+EXEC = /bin/true
+
+[periodic]
+ID = periodic-missing-period-4
+MESSAGE = D - The message
+PERIOD = second1
+EXEC = /bin/true
+
+[periodic]
+ID = periodic-missing-period-5
+MESSAGE = E - The message
+PERIOD = 1m
+EXEC = /bin/true
+
