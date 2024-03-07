@@ -19,14 +19,30 @@
 #include "kbtree.h"
 #include "kbbi.h"
 
+#define PIDFILE      ("/tmp/kubeka.pid")
+
 #define IERROR(...)      do {\
    fprintf (stderr, "%s:%i Internal error: ", __FILE__, __LINE__);\
    fprintf (stderr, __VA_ARGS__);\
+   fflush (stderr);\
+} while (0);
+
+#define IWARNING(...)      do {\
+   fprintf (stderr, "%s:%i Internal warning: ", __FILE__, __LINE__);\
+   fprintf (stderr, __VA_ARGS__);\
+   fflush (stderr);\
 } while (0);
 
 #define XERROR(...)      do {\
    fprintf (stderr, "Error: ");\
    fprintf (stderr, __VA_ARGS__);\
+   fflush (stderr);\
+} while (0);
+
+#define XWARNING(...)      do {\
+   fprintf (stderr, "Warning: ");\
+   fprintf (stderr, __VA_ARGS__);\
+   fflush (stderr);\
 } while (0);
 
 static sig_atomic_t g_endloop = 0;
@@ -246,6 +262,7 @@ int main (int argc, char **argv)
    ds_array_t *dedup_nodes = NULL;
    ds_array_t *entrypoints = NULL;
    ds_array_t *trees = NULL;
+   ds_array_t *threads = NULL;
 
 
    /* ***********************************************************************
@@ -343,7 +360,15 @@ int main (int argc, char **argv)
             goto cleanup;
          }
          if (pid > 0) {
-            printf ("Detached process created with PID: %i\n", pid);
+            FILE *pidfile = fopen (PIDFILE, "w");
+            if (!pidfile) {
+               XERROR ("Failed to open [%s] for writing: %m\n", PIDFILE);
+               goto cleanup;
+            }
+            fprintf (pidfile, "%s: %i\n", argv[0], pid);
+            fclose (pidfile);
+
+            printf ("Detached process created (PID written to [%s])\n", PIDFILE);
             ret = EXIT_SUCCESS;
             goto cleanup;
          }
@@ -480,9 +505,10 @@ int main (int argc, char **argv)
       kbnode_t *newnode = kbnode_instantiate (ep, dedup_nodes, &nerrors, &nwarnings);
       if (!newnode) {
          XERROR ("Node instantiation failure\n");
-      }
-      if (!(ds_array_ins_tail (trees, newnode))) {
-         IERROR ("OOM storing new root node\n");
+      } else {
+         if (!(ds_array_ins_tail (trees, newnode))) {
+            IERROR ("OOM storing new root node\n");
+         }
       }
    }
 
@@ -538,6 +564,8 @@ int main (int argc, char **argv)
     * 9. If user just wants to lint, we exit now.
     *
     */
+
+
    if (opt_lint) {
       ret = EXIT_SUCCESS;
       goto cleanup;
@@ -566,17 +594,25 @@ int main (int argc, char **argv)
    }
 
    // If no entrypoint specified, start a thread for each entrypoint
-   if (!opt_entry) {
+   if (opt_daemon) {
+      if (!(threads = ds_array_new ())) {
+         IERROR ("OOM creating threads array\n");
+         goto cleanup;
+      }
+
       // Wait for SIGINT to tell us to exit
       if ((signal (SIGINT, sigh) == SIG_ERR)) {
          XERROR ("Failed to set signal handler for SIGINT: %m\n");
          goto cleanup;
       }
 
-      // For each entrypoint in 'trees':
-      // 1. If it is of type 'periodic', start a thread with the period
-      //    set.
-      // 2. ... More thread types go here ...
+      size_t ntrees = ds_array_length (trees);
+      if (!ntrees) {
+         XWARNING ("No entrypoint nodes found, exiting\n");
+         ret = EXIT_SUCCESS;
+         goto cleanup;
+      }
+
       while (!g_endloop) {
          // Do nothing
       }
@@ -587,10 +623,6 @@ int main (int argc, char **argv)
       ret = EXIT_SUCCESS;
    }
 
-
-
-   // TODO: This must come out, not needed when everything is working
-   ret = EXIT_SUCCESS;
 cleanup:
    // ds_array_iterate (trees, (void (*) (void *, void*))kbnode_dump, stdout);
    ds_array_fptr (paths, free);
@@ -604,6 +636,8 @@ cleanup:
    ds_array_del (entrypoints);
    ds_array_fptr (trees, (void (*) (void *))kbnode_del);
    ds_array_del (trees);
+   ds_array_del (threads);
+
    if (ret != EXIT_SUCCESS) {
       ret = EXIT_FAILURE;
    }

@@ -1,0 +1,20 @@
+[job]
+ID = no-entrypoints-1
+MESSAGE = no-entrypoints-1
+EXEC = /bin/true
+
+[job]
+ID = no-entrypoints-2
+MESSAGE = no-entrypoints-2
+EXEC = /bin/true
+
+[job]
+ID =  no-entrypoints-3
+MESSAGE = reference
+EXEC = /bin/true
+
+[job]
+ID =   no-entrypoints-4
+MESSAGE = None
+EXEC = /bin/true
+

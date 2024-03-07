@@ -9,12 +9,19 @@ failed() {
 }
 
 passed() {
-   VGERR="`tail -n 1 vg.txt | cut -f 4 -d \  `"
+   VGERR="`tail -n 1 vg.txt 2>/dev/null | cut -f 4 -d \  `"
    if [ ! -z "$VGERR" ] && [ "$VGERR" -ne "0" ]; then
       failed "valgrind report errors in vg.txt"
    fi
    echo -e ${GREEN}${REV}PASSED${NC} $0
    exit 0
+}
+
+happy() {
+   VGERR="`tail -n 1 vg.txt 2>/dev/null | cut -f 4 -d \  `"
+   if [ ! -z "$VGERR" ] && [ "$VGERR" -ne "0" ]; then
+      failed "valgrind report errors in vg.txt"
+   fi
 }
 
 if [ "$1" == "vg" ]; then
@@ -39,7 +46,21 @@ single_test() {
       $PROG --lint \
          -f  tests/input/$1.kubeka \
          &> tests/output/$1.output && eval $2
-               diff tests/expected/$1.output tests/output/$1.output || failed
+      diff tests/expected/$1.output tests/output/$1.output || failed
+   fi
+}
+
+run_daemon() {
+   if [ `echo $PROG | grep -c 'gdb'` -gt 0 ]; then
+      $PROG --daemon \
+         -f  tests/input/$1.kubeka \
+         || failed
+   else
+      rm -f vg.txt
+      $PROG --daemon \
+         -f  tests/input/$1.kubeka \
+         &> tests/output/$1.output && eval $2
+      diff tests/expected/$1.output tests/output/$1.output || failed
    fi
 }
 
