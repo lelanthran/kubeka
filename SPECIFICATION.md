@@ -1,5 +1,9 @@
 # Specification for the Kubeka Continuous Delivery tool
 
+> **WARNING: This is still a Work-in-Progress**
+> As a *WIP*, what's in here might not be eventually implemented, and what
+> is eventually implemented might not be in here.
+
 ## OVERVIEW
 **Kubeka** is a small, simple CD tool for performing automated actions, such
 as testing, deployments, etc.
@@ -7,7 +11,7 @@ as testing, deployments, etc.
 > **GOAL**
 >
 > Specify CD workflows in a format simpler than current formats, using
-> linting to prevent runtime errors.
+> linting to limit runtime errors.
 >
 
 ## MECHANISM
@@ -29,6 +33,9 @@ actions::
 1. Execute a command
 2. Emit a signal
 3. Invoke an ordered list of other nodes
+
+> In the following description, items marked with a ** \* ** are not yet
+> implemented.
 
 ### Sanity Checks {#sc}
 On tree creation, prior to evaluation, some sanity checks are applied:
@@ -68,7 +75,7 @@ table for that variable, then the ancestors are searched for that variable
 until one is found.
 
 Variables are set using `variable = some value`, on a single line. Variables
-are substituted using `$(variable)`.
+are substituted using `$\<variable\>`.
 
  1. Variables with a leading underscore cannot be set (constants)
  2. Variables [in all uppercase](#tuv) can be read/written, but are used by
@@ -76,8 +83,8 @@ are substituted using `$(variable)`.
     what jobs to run).
  3. All other non-numbered variable patterns are up for grabs by the user
  [^1].
- 4. All `$(symbol)` is parsed as a variable substitution
- 5. All `$(symbol text ...)` is parsed as a builtin command, the results of
+ 4. All `$\<symbol\>` is parsed as a variable substitution
+ 5. All `$\<symbol text ...\>` is parsed as a builtin command, the results of
     which are substituted. See "BUILTIN COMMANDS" in the docs.
  6. [All variables are arrays](#avaa).
 
@@ -89,15 +96,22 @@ are substituted using `$(variable)`.
 
 | Variable | Used as  |
 | ------------ | ---------------|
-| `ID`            |  Sets a **unique** name for the node.
-| `_WORKING_PATH` |  Constant containing the execution directory
-| `EMIT`          |  The signal to generate on successful completion
-| `HANDLES`       |  Specifies a signal to start on
-| `MESSAGE`       |  The message that will be logged when node is invoked
-| `EXEC`          |  A command that will be executed when node is invoked
-| `ROLLBACK`      |  A command that will be executed on node failure
-| `JOBS`          |  An ordered array of jobs to execute
-| `LOG`           |  A comma-separated list of [logging keywords](#lk)
+| \*`LOG`         | A comma-separated list of [logging keywords](#lk)
+| `_FILENAME`     | The file in which the node is defined
+| `_LINE`         | The liner number of the node definition
+| `ID`            | Sets a **unique** name for the node.
+| `MESSAGE`       | The message that will be logged when node is invoked
+| `JOBS`          | An ordered array of jobs to execute
+| `EXEC`          | A command that will be executed when node is invoked
+| `EMITS`         | The signal to generate on successful completion
+| `HANDLES`       | Specifies a signal to start on
+| `ROLLBACK`      | A command that will be executed on node failure
+| `DIRECTORY`     | The directory in which to execute in
+| `RUNAS_USER`    | The user to execute as
+| `RUNAS_GROUP`   | The group to execute as
+| `PERIOD`        | For `[periodic] nodes, the interval between executions
+| `COUNTER`       | For `[periodic] nodes, the number of executions
+
 
 ### Mandatory variables {#mv}
 For **all nodes** the following variables **must** be defined:
@@ -117,28 +131,28 @@ use a variable as an index into an array[^2].
 
 | Variable Usage | Explanation |
 | ------------  | ---------------|
-| `$(var)`      |  Shorthand for `$(var[0])`
-| `var = name`  |  Shorthand for `var[0] = name`
-| `$(var[#])`   |  The number of elements in the array
-| `$(var[\*])`  |  A single string containing all the
-|               |  elements separated by a single space
-|               |  character, for example `el-1 el-2 ...`
-| `$(var[@])`   |  A single string containing all the
+| `$\<var\>`        |  Shorthand for `$\<var[0]\>`
+| `var = name`      |  Shorthand for `var[0] = name`
+| \*`$\<var[#]\>`   |  The number of elements in the array
+| \*`$\<var[\*]\>`  |  A single string containing all the
+|                   |  elements separated by a single space
+|                   |  character, for example `el-1 el-2 ...`
+| \*`$\<var[@]\>` |  A single string containing all the
 |               |  elements in array syntax, for
 |               |  example `[ el-1, el-2, .... el-n ]`
 
-## Logging keywords {#lk}
-The `LOG` variable specifies what to log. The user specifies a comma
+## \*Logging keywords {#lk}
+The \*`LOG` variable specifies what to log. The user specifies a comma
 separated list of *logging keywords* (default 'exec, exit-error, info`):
 
 | Keyword | Logging behaviour |
 | ------- | ---------------- |
-| `exec`        | Log all exec output (stdout + stderr)
-| `exit-error`  | Log the exit code when the exit code is non-zero
-| `exit-success`| Log the exit code when the exit code is zero
-| `entry`       | A message when invocation enters a node
-| `exit`        | A message when invocation leaves a node
-| `info`        | The identifier and message of the node during invocation
+| \*`exec`        | Log all exec output (stdout + stderr)
+| \*`exit-error`  | Log the exit code when the exit code is non-zero
+| \*`exit-success`| Log the exit code when the exit code is zero
+| \*`entry`       | A message when invocation enters a node
+| \*`exit`        | A message when invocation leaves a node
+| \*`info`        | The identifier and message of the node during invocation
 
 
 ## EXAMPLE
@@ -163,17 +177,19 @@ piece of software that has some `ROLLBACK` requirement.
 #     parent      A pointer to a parent node (invocation only, for symbol
 #                 resolution)
 #     children    An array of child nodes (invocation only, for clean up)
+#     handlers    An array of handler nodes (which handle signals emitted
+#                 by the node.
 #
 # A node is cloned, and only the clone is invoked (this keeps the original
 # symbol table intact for future invocations of that node). The 'cloning'
-# is not really a clone, as it will use $(JOBS[]) to populate all the
+# is not really a clone, as it will use $<JOBS[]> to populate all the
 # children, and will need a parent to attach to.
 #
 # The result is a **tree** of nodes, with the root node getting invoked,
 # and recursively invoking (or emitting) other nodes.
 #
-# Invocation is performed by shelling out and executing $(EXEC), or by
-# executing all elements of $(JOBS) in order (sanity check ensures that
+# Invocation is performed by shelling out and executing $<EXEC>, or by
+# executing all elements of $<JOBS> in order (sanity check ensures that
 # only one of EXEC, JOBS or EMIT will be set).
 #
 # Symbol lookup is performed recursively towards the root of the tree
@@ -200,11 +216,11 @@ END_SIGNAL = Signal to be emitted when this job completes (any string)
 START_SIGNAL = Signal to wait for to start this job
 
 # Some variables set by the user
-appname = $(env_read APPNAME)
+appname = $<env_read APPNAME>
 build_artifacts =
-build_artifacts = $(build_artifacts) bin/program
-build_artifacts = $(build_artifacts) info/release-info.txt
-target_directory = /var/www/$(appname)
+build_artifacts = $<build_artifacts> bin/program
+build_artifacts = $<build_artifacts> info/release-info.txt
+target_directory = /var/www/$<appname>
 
 # Finally, the ordered list of jobs to execute for this job
 JOBS[] = [ Full deployment ]
@@ -231,56 +247,56 @@ ID = Check changes
 MESSAGE = Checking if sources changed, will continue only if sources changed
 LOG = # Suppress all messages
 EXEC =
-EXEC = $(EXEC) if [ `git  ls-remote $(git_origin) heads/master | cut -f 1 ` == $(current HASH)]; then
-EXEC = $(EXEC)    exit -1;
-EXEC = $(EXEC) else
-EXEC = $(EXEC)    exit 0;
+EXEC = $<EXEC> if [ `git  ls-remote $<git_origin> heads/master | cut -f 1 ` == $<current HASH>]; then
+EXEC = $<EXEC>    exit -1;
+EXEC = $<EXEC> else
+EXEC = $<EXEC>    exit 0;
 
 [job]
 ID = checkout   # Comments work like this
 MESSAGE = A single long line message up to 8kb
 ROLLBACK = # Nothing to do if this fails
-EXEC = git clone $(git_origin) && git checkout $(git_branch) $(_WORKING_PATH)
+EXEC = git clone $<git_origin> && git checkout $<git_branch> $<_WORKING_PATH>
 
 [job]
 ID = Build thing
-MESSAGE = Building $(_JOB) for $(_DEPLOYMENT) with parameter $1
+MESSAGE = Building $<_JOB> for $<_DEPLOYMENT> with parameter $1
 ROLLBACK = # Nothing to do if this fails
 EXEC = make $1
 
 [job]
 ID = test
-MESSAGE = Testing $(_DEPLOYMENT)
+MESSAGE = Testing $<_DEPLOYMENT>
 ROLLBACK = # Nothing to do if this fails
 EXEC = test.sh
 
 [job]
 ID = package
-MESSAGE = Packaging $(_DEPLOYMENT)
-EXEC = tar -zcvf $(_TMPDIR)/$(env_read APPNAME).tar.gz $(build_artifacts)
+MESSAGE = Packaging $<_DEPLOYMENT>
+EXEC = tar -zcvf $<_TMPDIR>/$<env_read APPNAME>.tar.gz $<build_artifacts>
 
 [job]
 ID = pre-deployment
-MESSAGE = Deploying to $(target_directory)
-WORKING_DIR = $(target_directory)
-EXEC = systemctl stop && tar -zxvf $(env_read APPNAME)
+MESSAGE = Deploying to $<target_directory>
+WORKING_DIR = $<target_directory>
+EXEC = systemctl stop && tar -zxvf $<env_read APPNAME>
 
 [job]
 ID = Upgrade DB
 MESSAGE = Upgrading database
-WORKING_DIR = $(target_directory)
-ROLLBACK = $(exec ./rollback.sh)
+WORKING_DIR = $<target_directory>
+ROLLBACK = $<exec ./rollback.sh>
 EXEC = db/upgrade.sh
 
 [job]
 ID = Copy files
-MESSAGE = Copying files to $(target_directory)
-EXEC = cp -Rv $(artifacts) $(target_directory)
+MESSAGE = Copying files to $<target_directory>
+EXEC = cp -Rv $<artifacts> $<target_directory>
 
 [job]
 ID = Done
 MESSAGE = Setting finished variables
-HASH = $(exec git log -1 | head -n 1 | cut -f 1 -d \  )
+HASH = $<exec git log -1 | head -n 1 | cut -f 1 -d \  >
 
 ```
 
