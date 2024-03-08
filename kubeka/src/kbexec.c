@@ -187,7 +187,7 @@ int kbexec_shell (const kbnode_t *node, const char *command,
       // group ownership remains unchanged if specified as (gid_t)-1.
       if ((chown (wdir, pw_uid, pw_gid)) != 0) {
          KBPARSE_ERROR (fname, line,
-                  "Failed to change ownership of [%s] to [%s]\n", wdir, wuser);
+                  "Failed to change ownership of [%s] to [%s]: %m\n", wdir, wuser);
          goto cleanup;
       }
    }

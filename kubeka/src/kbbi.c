@@ -361,7 +361,7 @@ void *th_periodic (void *params)
       }
    }
 
-   KBIERROR ("Shutting down node %s with return code: %i\n", id, ret);
+   KBWARN ("Shutting down node %s with return code: %i\n", id, ret);
    p->completed = true;
    p->retcode = ret;
    kbperiod_del (period);

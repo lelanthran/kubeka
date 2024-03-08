@@ -1,0 +1,2 @@
+Test in this directory must be run as root so that the user-switching can be
+tested.

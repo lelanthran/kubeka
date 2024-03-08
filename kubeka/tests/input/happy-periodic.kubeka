@@ -1,6 +1,7 @@
 [periodic]
 ID = periodic-1
 MESSAGE = periodic
+RUNAS_USER = nobody
 PERIOD = 2s    # Run every 2s
 COUNTER = 2     # Until COUNTER == 0
 EXEC = echo "counter = $<COUNTER>" && /bin/true

@@ -37,8 +37,8 @@ enum kbnode_type_t {
 #define KBNODE_KEY_PERIOD     "PERIOD"
 #define KBNODE_KEY_COUNTER    "COUNTER"
 #define KBNODE_KEY_WDIR       "DIRECTORY"
-#define KBNODE_KEY_WUSER      "RUN_USER"
-#define KBNODE_KEY_WGROUP     "RUN_GROUP"
+#define KBNODE_KEY_WUSER      "RUNAS_USER"
+#define KBNODE_KEY_WGROUP     "RUNAS_GROUP"
 
 #define KBNODE_FLAG_INSTANTIATED    (1 >> 0)
 

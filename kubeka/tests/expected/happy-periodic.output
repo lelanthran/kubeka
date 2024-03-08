@@ -28,7 +28,7 @@ counter = 2
 
 -----
 ::STARTING:periodic-1:periodic
-[src/kbbi.c:364] Error in th_periodic(): Shutting down node periodic-1 with return code: 0
+Warning: Shutting down node periodic-1 with return code: 0
 Daemon recent/bin/kubeka.elf started with pid 0
 Processing 1 kubeka files
 Reading tests/input/happy-periodic.kubeka ...
