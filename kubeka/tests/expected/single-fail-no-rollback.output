@@ -1,6 +1,16 @@
 Failed to open directory [/etc/kubeka] for reading: No such file or directory
 Instantiating [single-fail-no-rollback-2] as child of [NULL]
 Instantiating [single-fail-no-rollback-1] as child of [single-fail-no-rollback-2]
+Processing 1 kubeka files
+Reading tests/input/single-fail-no-rollback.kubeka ...
+Checking for duplicates ... none
+Found 1 entrypoint nodes
+Node [single-fail-no-rollback-2]: 0 errors, 0 warnings
+Linting complete.
+Found 0 errors and 0 warnings
+Found 2 nodes (1 runnable)
+::STARTING:single-fail-no-rollback-2:Entrypoint node
+::STARTING:single-fail-no-rollback-1:Executing shell command
 Error in tests/input/single-fail-no-rollback.kubeka:2: Failed to run node [single-fail-no-rollback-1]. Full node follows:
 Node [job] with parent [single-fail-no-rollback-2]: 0x1
    _FILENAME: tests/input/single-fail-no-rollback.kubeka
@@ -49,7 +59,7 @@ Found 0 errors and 0 warnings
 Found 2 nodes (1 runnable)
 ::STARTING:single-fail-no-rollback-2:Entrypoint node
 ::STARTING:single-fail-no-rollback-1:Executing shell command
-::COMMAND:echo "Failing on single-fail-no-rollback-1" && /bin/false:1:64 bytes
+::COMMAND:echo "Failing on single-fail-no-rollback-1" && /bin/false:256:37 bytes
 -----
 Failing on single-fail-no-rollback-1
 

@@ -36,6 +36,9 @@ enum kbnode_type_t {
 #define KBNODE_KEY_ROLLBACK   "ROLLBACK"
 #define KBNODE_KEY_PERIOD     "PERIOD"
 #define KBNODE_KEY_COUNTER    "COUNTER"
+#define KBNODE_KEY_WDIR       "DIRECTORY"
+#define KBNODE_KEY_WUSER      "RUN_USER"
+#define KBNODE_KEY_WGROUP     "RUN_GROUP"
 
 #define KBNODE_FLAG_INSTANTIATED    (1 >> 0)
 

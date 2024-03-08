@@ -14,7 +14,18 @@ Found 3 nodes (1 runnable)
 ::STARTING:single-happy-2:Still no message
 ::STARTING:single-happy-1:No message
 ::STARTING:single-happy-3:the handler for signals
-::COMMAND:/bin/true && echo "Hello World from single-happy-3":0:64 bytes
+Processing 1 kubeka files
+Reading tests/input/single-happy.kubeka ...
+Checking for duplicates ... none
+Found 1 entrypoint nodes
+Node [single-happy-2]: 0 errors, 0 warnings
+Linting complete.
+Found 0 errors and 0 warnings
+Found 3 nodes (1 runnable)
+::STARTING:single-happy-2:Still no message
+::STARTING:single-happy-1:No message
+::STARTING:single-happy-3:the handler for signals
+::COMMAND:/bin/true && echo "Hello World from single-happy-3":0:32 bytes
 -----
 Hello World from single-happy-3
 

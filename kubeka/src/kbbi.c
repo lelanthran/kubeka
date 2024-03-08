@@ -89,7 +89,7 @@ static bool kbbi_rollback (kbnode_t *node, size_t *nerrors, size_t *nwarnings)
    for (size_t i=0; actions[i]; i++) {
       char *result = NULL;
       size_t result_len = 0;
-      int rc = kbexec_shell (fname, line, actions[i], &result, &result_len);
+      int rc = kbexec_shell (node, actions[i], &result, &result_len);
       printf ("::ROLLBACK:%s:%i:%zu bytes\n-----\n%s\n-----\n",
                actions[i], rc, result_len, result);
       if (rc) {
@@ -153,7 +153,7 @@ static int kbbi_run (kbnode_t *node, size_t *nerrors, size_t *nwarnings)
    for (size_t i=0; s_exec && s_exec[i] && s_exec[i][0]; i++) {
       char *result = NULL;
       size_t result_len = 0;
-      ret |= kbexec_shell (fname, line, s_exec[i], &result, &result_len);
+      ret |= kbexec_shell (node, s_exec[i], &result, &result_len);
       printf ("::COMMAND:%s:%i:%zu bytes\n-----\n%s\n-----\n",
                s_exec[i], ret, result_len, result);
       free (result);
@@ -361,8 +361,7 @@ void *th_periodic (void *params)
       }
    }
 
-   KBIERROR ("Shutting down thread %i with return code: %i\n",
-            (int)p->tid, ret);
+   KBIERROR ("Shutting down node %s with return code: %i\n", id, ret);
    p->completed = true;
    p->retcode = ret;
    kbperiod_del (period);

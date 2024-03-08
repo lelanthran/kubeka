@@ -3,5 +3,5 @@ ID = periodic-1
 MESSAGE = periodic
 PERIOD = 2s    # Run every 2s
 COUNTER = 2     # Until COUNTER == 0
-EXEC = echo "counter = $<COUNTER> at `date`" && /bin/true
+EXEC = echo "counter = $<COUNTER>" && /bin/true
 
